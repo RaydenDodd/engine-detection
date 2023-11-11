@@ -6,7 +6,7 @@ Prerequisites
 
 - Python 3.11 or greater installed on your system
 
-To Run The program
+To Run The Program
 ------------------
 
 - Open the src directory inside a terminal
