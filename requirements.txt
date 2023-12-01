@@ -1,0 +1,9 @@
+pydub
+tqdm
+librosa
+scikit-learn
+tensorflow
+numpy
+matplotlib
+sounddevice
+scipy
