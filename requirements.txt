@@ -1,2 +1,5 @@
 pydub
 tqdm
+librosa
+scikit-learn
+tensorflow
