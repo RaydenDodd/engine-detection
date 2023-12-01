@@ -41,7 +41,7 @@ def slice_audio():
         os.makedirs(r'{}'.format(chunk_test_output_dir))
 
     print('Splitting audio into chunks...')
-    for brand in tqdm(raw_audio_dirs):
+    for brand in tqdm(raw_train_audio_dirs):
         # Check if the brand output directories exist and create them if needed
         if not os.path.exists(r'{}/{}'.format(chunk_train_output_dir, brand)):
             os.makedirs(r'{}/{}'.format(chunk_train_output_dir, brand))
@@ -49,11 +49,14 @@ def slice_audio():
             os.makedirs(r'{}/{}'.format(chunk_test_output_dir, brand))
 
         # Get a list of all audio files for this brand
-        brand_files = os.listdir(raw_audio_dirs[brand])
+        #brand_files = os.listdir(raw_audio_dirs[brand])
+        train_files = os.listdir(raw_train_audio_dirs[brand])
+        test_files = os.listdir(raw_test_audio_dirs[brand])
 
-        for file in brand_files:
+        # Split the training files
+        for file in train_files:
             # Get the relative path to the current file
-            file_relative = r'{}/{}/{}'.format(audio_dir, brand, file)
+            file_relative = r'{}/{}/train/{}'.format(audio_dir, brand, file)
             file_no_ext = re.split(r'.' + AUDIO_FILE_EXT, file)[0]
 
             # Load the audio file and turn it into chunks
@@ -66,13 +69,28 @@ def slice_audio():
                 file_num = str(i).zfill(5)
                 chunk_name = r'{}_{}.{}'.format(file_no_ext, file_num, AUDIO_FILE_EXT)
 
-                # Most files will go toward training while some will go toward testing
-                if random.uniform(0, 1) < TRAIN_CHANCE:
-                    output_relative = r'{}/{}'.format(chunk_train_output_dirs[brand], chunk_name)
-                    chunk.export(output_relative, format=AUDIO_FILE_EXT)
-                else:
-                    output_relative = r'{}/{}'.format(chunk_test_output_dirs[brand], chunk_name)
-                    chunk.export(output_relative, format=AUDIO_FILE_EXT)
+                output_relative = r'{}/{}'.format(chunk_train_output_dirs[brand], chunk_name)
+                chunk.export(output_relative, format=AUDIO_FILE_EXT)
+
+        # Split the test files
+        for file in test_files:
+            # Get the relative path to the current file
+            file_relative = r'{}/{}/test/{}'.format(audio_dir, brand, file)
+            file_no_ext = re.split(r'.' + AUDIO_FILE_EXT, file)[0]
+
+            # Load the audio file and turn it into chunks
+            audio = AudioSegment.from_file(file_relative, AUDIO_FILE_EXT)
+            audio_chunks = make_chunks(audio, AUDIO_CHUNK_LEN)
+
+            # Save the chunks to their own output files
+            # The last chunk may not be the full length, so we discard it
+            for i, chunk in enumerate(audio_chunks[:-1]):
+                file_num = str(i).zfill(5)
+                chunk_name = r'{}_{}.{}'.format(file_no_ext, file_num, AUDIO_FILE_EXT)
+
+                output_relative = r'{}/{}'.format(chunk_test_output_dirs[brand], chunk_name)
+                chunk.export(output_relative, format=AUDIO_FILE_EXT)
+
 
 
 def extract_mfccs():
@@ -89,11 +107,11 @@ def extract_mfccs():
 
     # Loop over each brand in the cut audio train folder
     print('Extracting training MFCCs...')
-    for brand in tqdm(chunk_train_output_dirs):
+    for i, brand in enumerate(chunk_train_output_dirs):
         brand_files = os.listdir(chunk_train_output_dirs[brand])
 
         # Loop over each audio file in the brand folder
-        for i, file in enumerate(brand_files):
+        for file in brand_files:
             # Get the file name without the extension
             #file_no_ext = re.split(r'.' + AUDIO_FILE_EXT, file)[0]
 
@@ -111,13 +129,13 @@ def extract_mfccs():
                 data['train']['labels'].append(i)
                 data['train']['category'].append(brand)
 
-    # Loop over each brand in the cut audio train folder
+    # Loop over each brand in the cut audio test folder
     print('Extracting testing MFCCs...')
-    for brand in tqdm(chunk_test_output_dirs):
+    for i, brand in enumerate(chunk_test_output_dirs):
         brand_files = os.listdir(chunk_test_output_dirs[brand])
 
         # Loop over each audio file in the brand folder
-        for i, file in enumerate(brand_files):
+        for file in brand_files:
             # Get the file name without the extension
             # file_no_ext = re.split(r'.' + AUDIO_FILE_EXT, file)[0]
 
@@ -152,11 +170,18 @@ if __name__ == '__main__':
     chunk_train_output_dir = fr'{chunk_output_dir}/train'
     chunk_test_output_dir = fr'{chunk_output_dir}/test'
 
-    raw_audio_dirs = {
-        "Lexus": r'{}/Lexus'.format(audio_dir),
-        "Nissan": r'{}/Nissan'.format(audio_dir),
-        "Scion": r'{}/Scion'.format(audio_dir),
-        "Toyota": r'{}/Toyota'.format(audio_dir)
+    raw_train_audio_dirs = {
+        "Lexus": r'{}/Lexus/train'.format(audio_dir),
+        "Nissan": r'{}/Nissan/train'.format(audio_dir),
+        "Scion": r'{}/Scion/train'.format(audio_dir),
+        "Toyota": r'{}/Toyota/train'.format(audio_dir)
+    }
+
+    raw_test_audio_dirs = {
+        "Lexus": r'{}/Lexus/test'.format(audio_dir),
+        "Nissan": r'{}/Nissan/test'.format(audio_dir),
+        "Scion": r'{}/Scion/test'.format(audio_dir),
+        "Toyota": r'{}/Toyota/test'.format(audio_dir)
     }
 
     chunk_train_output_dirs = {
