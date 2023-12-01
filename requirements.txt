@@ -3,3 +3,5 @@ tqdm
 librosa
 scikit-learn
 tensorflow
+numpy
+matplotlib
