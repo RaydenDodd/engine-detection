@@ -98,7 +98,7 @@ def apply_augmentation():
         # List all audio files in the folder
         audio_files = [file for file in os.listdir(augment_output_dirs[brand]) if file.endswith(('.wav', '.mp3', '.ogg', '.flac', '.WAV'))]
 
-        # Calculate the number of samples to create for each audio file
+        # IMPORTANT: Change number of audio files to calculate the number of samples to create for each audio file
         samples_per_file = 10 // len(audio_files)
 
         # Loop over each audio file in the brand folder
@@ -152,5 +152,3 @@ if __name__ == '__main__':
     }
 
     apply_augmentation()
-
-
