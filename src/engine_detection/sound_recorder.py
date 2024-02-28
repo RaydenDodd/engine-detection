@@ -45,17 +45,17 @@ class SoundRecorder:
             audio = SoundRecorder.__resample(audio, sample_rate)
 
         if num_channels != NUM_CHANNELS:
-            write('temp.wav', SAMPLE_RATE, audio)
-            left = AudioSegment.from_wav('temp.wav')
-            right = AudioSegment.from_wav('temp.wav')
+            write('eng_temp/temp.wav', SAMPLE_RATE, audio)
+            left = AudioSegment.from_wav('eng_temp/temp.wav')
+            right = AudioSegment.from_wav('eng_temp/temp.wav')
             audio = AudioSegment.from_mono_audiosegments(left, right)
             data_type = 'audiosegment'
 
         # Write the processed audio to a file
         if data_type == 'ndarray':
-            write('output.wav', SAMPLE_RATE, audio)
+            write('eng_temp/output.wav', SAMPLE_RATE, audio)
         else:
-            audio.export('output.wav', format='wav')
+            audio.export('eng_temp/output.wav', format='wav')
 
     @staticmethod
     def __resample(audio, orig_sample_rate):

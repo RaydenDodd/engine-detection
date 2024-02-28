@@ -1,13 +1,19 @@
+import os
+import shutil
 import sys
 import time
 
+import scipy
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QLabel, QPushButton, QComboBox, QVBoxLayout, QHBoxLayout
 from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import Qt
 
+from engine_detection.engine_classifier import EngineClassifier
+from engine_detection.engine_detector import EngineDetector
+from engine_detection.mfcc_extractor import MFCCExtractor
 from engine_detection.sound_recorder import SoundRecorder
 
-RECORDING_LENGTH = 5  # in seconds
+RECORDING_LENGTH = 1  # in seconds
 
 class GUI(QMainWindow):
 
@@ -97,17 +103,61 @@ class GUI(QMainWindow):
         # Non-GUI setup
         self.continue_flag = False
         self.microphone = SoundRecorder()
+        self.detector = EngineDetector()
+        self.classifier = EngineClassifier()
+        self.mfcc_extractor = MFCCExtractor()
+        self.brands = ['Lexus', 'Nissan', 'Scion', 'Toyota']
+        self.brands_image_dict = {
+            'Lexus': 'photos/lexus.png',
+            'Nissan': 'photos/nissan.png',
+            'Scion': 'photos/scion.png',
+            'Toyota': 'photos/toyota.png',
+        }
+
+        # Set up the temp directory
+        if not os.path.exists(r'eng_temp/'):
+            os.makedirs(r'eng_temp/')
+        else:
+            shutil.rmtree(r'eng_temp/cut_audio')
+            os.makedirs(r'eng_temp/cut_audio')
 
     def __process_loop(self):
         while self.continue_flag:
             print("Processing")
             # Record 5 seconds of audio, then save it
-            recording = self.microphone.record(RECORDING_LENGTH)
-            SoundRecorder.preprocess(recording, 1, 48000)
+            #recording = self.microphone.record(RECORDING_LENGTH)
+            #SoundRecorder.preprocess(recording, 1, 48000)
+
 
             # Our audio file is saved as output.wav in the current working directory
+            # Feed the audio into the engine detector. If nothing is detected, don't
+            # feed it into the neural network
+            if not self.detector.detect():
+                continue
 
-            # Feed the audio into the engine detector
+            # Extract the MFCCs from the file that was saved,
+            # then feed them into the engine classifier
+            self.mfcc_extractor.slice_audio()
+            mfccs = self.mfcc_extractor.extract()
+            classification_results = self.classifier.classify(mfccs)
+
+            results_accumulator = [0] * len(classification_results[0])
+
+            # add the results for each class
+            for result in classification_results:
+                for index, value in enumerate(result):
+                    results_accumulator[index] += value
+
+            #sorted_results = sorted(results_accumulator)
+            sorted_results = sorted(range(len(results_accumulator)), key=lambda k: results_accumulator[k])
+            brand_1 = self.brands[sorted_results[-1]]
+            brand_2 = self.brands[sorted_results[-2]]
+            brand_3 = self.brands[sorted_results[-3]]
+
+            # Update the GUI images
+            self.__update_image_1(brand_1)
+            self.__update_image_2(brand_2)
+            self.__update_image_3(brand_3)
 
             QApplication.processEvents()
 
@@ -175,4 +225,15 @@ class GUI(QMainWindow):
         image_box_layout.addWidget(self.image_3_description)
 
         return image_box_3  # Return the widget that contains the layout
-    
+
+    def __update_image_1(self, brand: str):
+        self.image_1_label.setPixmap(QPixmap(self.brands_image_dict[brand]).scaledToWidth(300))
+        self.image_1_description.setText(f'Brand 1: {brand}')
+
+    def __update_image_2(self, brand: str):
+        self.image_2_label.setPixmap(QPixmap(self.brands_image_dict[brand]).scaledToWidth(300))
+        self.image_2_description.setText(f'Brand 2: {brand}')
+
+    def __update_image_3(self, brand: str):
+        self.image_3_label.setPixmap(QPixmap(self.brands_image_dict[brand]).scaledToWidth(300))
+        self.image_3_description.setText(f'Brand 3: {brand}')
