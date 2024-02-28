@@ -23,7 +23,7 @@ class SoundRecorder:
             raise ValueError('Device index not set')
 
         sd.default.device = self.device_id
-        recording = sd.rec(int(duration * SAMPLE_RATE), samplerate=SAMPLE_RATE, channels=NUM_CHANNELS)
+        recording = sd.rec(int(duration * SAMPLE_RATE), samplerate=SAMPLE_RATE, channels=1)
         sd.wait()
         return recording
 
