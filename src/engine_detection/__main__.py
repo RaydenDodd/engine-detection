@@ -11,15 +11,16 @@ def car_gui_demo():
     available_microphones = ["Microphone 1", "Microphone 2", "Microphone 3"]
     # Add in items into the box
     mic_menu.addItems(available_microphones)
+    #mic_menu.setFixedWidth(200)
 
     # Set up widgets
     settings_button = QPushButton('Settings')
-    input_label = QLabel('Input:')
+    input_label = QLabel('Spectrogram View:')
     waveform_image = QLabel()
     waveform_image.setPixmap(QPixmap("photos/spectrogram.png"))
-    play_button = QPushButton('Play')
+    play_button = QPushButton('Start')
     stop_button = QPushButton('Stop')
-    title_label = QLabel("Engine Recommendations")
+    title_label = QLabel("Most Likely Brands")
 
     # left layout includes the microphone drop down menu, spectrogram image, play, stop, buttons
     left_layout = QVBoxLayout()
@@ -63,9 +64,9 @@ def car_gui_demo():
 
     # Add in images of car engines
     vertical_stack_layout.addWidget(title_label)
-    vertical_stack_layout.addWidget(create_image_box("photos/carA.jpg", "2007 Lexus GS350 AWD | 3.0L V6"))
-    vertical_stack_layout.addWidget(create_image_box("photos/carB.jpg", "2008 Scion Tc | 2.4L I4"))
-    vertical_stack_layout.addWidget(create_image_box("photos/carC.jpg", "2018 Toyota Highlander | 3.0L V6"))
+    vertical_stack_layout.addWidget(create_image_box("photos/carA.png", "2007 Lexus GS350 AWD | 3.0L V6"))
+    vertical_stack_layout.addWidget(create_image_box("photos/carB.png", "2008 Scion Tc | 2.4L I4"))
+    vertical_stack_layout.addWidget(create_image_box("photos/carC.jpeg", "2018 Toyota Highlander | 3.0L V6"))
     vertical_stack_layout.setAlignment(Qt.AlignCenter)
 
     main_window = QWidget()

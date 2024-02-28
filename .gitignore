@@ -1,0 +1,17 @@
+# IDE, Python build folders
+.idea
+__pycache__
+
+# ML Model
+engine_detect.keras
+
+# Audio files - available on shared drive
+audio
+*.wav
+*.mp3
+
+# Folders generated through scripts
+cut_audio
+mfccs
+
+demo
