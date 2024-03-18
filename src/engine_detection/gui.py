@@ -132,7 +132,7 @@ class GUI(QMainWindow):
             # Our audio file is saved as output.wav in the current working directory
             # Feed the audio into the engine detector. If nothing is detected, don't
             # feed it into the neural network
-            if not self.detector.detect():
+            if not self.detector.detect("output.wav"):
                 continue
 
             # Extract the MFCCs from the file that was saved,
