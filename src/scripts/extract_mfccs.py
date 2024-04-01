@@ -35,28 +35,21 @@ def slice_audio():
     # Check if the output dirs are present and create them if needed
     if not os.path.exists(r'{}'.format(chunk_output_dir)):
         os.makedirs(r'{}'.format(chunk_output_dir))
-    if not os.path.exists(r'{}'.format(chunk_train_output_dir)):
-        os.makedirs(r'{}'.format(chunk_train_output_dir))
-    if not os.path.exists(r'{}'.format(chunk_test_output_dir)):
-        os.makedirs(r'{}'.format(chunk_test_output_dir))
 
     print('Splitting audio into chunks...')
-    for brand in tqdm(raw_train_audio_dirs):
+    for brand in tqdm(raw_audio_dirs):
         # Check if the brand output directories exist and create them if needed
-        if not os.path.exists(r'{}/{}'.format(chunk_train_output_dir, brand)):
-            os.makedirs(r'{}/{}'.format(chunk_train_output_dir, brand))
-        if not os.path.exists(r'{}/{}'.format(chunk_test_output_dir, brand)):
-            os.makedirs(r'{}/{}'.format(chunk_test_output_dir, brand))
+        if not os.path.exists(r'{}/{}'.format(chunk_output_dir, brand)):
+            os.makedirs(r'{}/{}'.format(chunk_output_dir, brand))
 
         # Get a list of all audio files for this brand
         #brand_files = os.listdir(raw_audio_dirs[brand])
-        train_files = os.listdir(raw_train_audio_dirs[brand])
-        test_files = os.listdir(raw_test_audio_dirs[brand])
+        train_files = os.listdir(raw_audio_dirs[brand])
 
         # Split the training files
         for file in train_files:
             # Get the relative path to the current file
-            file_relative = r'{}/{}/train/{}'.format(audio_dir, brand, file)
+            file_relative = r'{}/{}/{}'.format(audio_dir, brand, file)
             file_no_ext = re.split(r'.' + AUDIO_FILE_EXT, file)[0]
 
             # Load the audio file and turn it into chunks
@@ -69,26 +62,7 @@ def slice_audio():
                 file_num = str(i).zfill(5)
                 chunk_name = r'{}_{}.{}'.format(file_no_ext, file_num, AUDIO_FILE_EXT)
 
-                output_relative = r'{}/{}'.format(chunk_train_output_dirs[brand], chunk_name)
-                chunk.export(output_relative, format=AUDIO_FILE_EXT)
-
-        # Split the test files
-        for file in test_files:
-            # Get the relative path to the current file
-            file_relative = r'{}/{}/test/{}'.format(audio_dir, brand, file)
-            file_no_ext = re.split(r'.' + AUDIO_FILE_EXT, file)[0]
-
-            # Load the audio file and turn it into chunks
-            audio = AudioSegment.from_file(file_relative, AUDIO_FILE_EXT)
-            audio_chunks = make_chunks(audio, AUDIO_CHUNK_LEN)
-
-            # Save the chunks to their own output files
-            # The last chunk may not be the full length, so we discard it
-            for i, chunk in enumerate(audio_chunks[:-1]):
-                file_num = str(i).zfill(5)
-                chunk_name = r'{}_{}.{}'.format(file_no_ext, file_num, AUDIO_FILE_EXT)
-
-                output_relative = r'{}/{}'.format(chunk_test_output_dirs[brand], chunk_name)
+                output_relative = r'{}/{}'.format(chunk_output_dirs[brand], chunk_name)
                 chunk.export(output_relative, format=AUDIO_FILE_EXT)
 
 
@@ -106,9 +80,9 @@ def extract_mfccs():
     expected_num_mfcc_vectors = math.ceil(sample_rate / hop_length)
 
     # Loop over each brand in the cut audio train folder
-    print('Extracting training MFCCs...')
-    for i, brand in enumerate(chunk_train_output_dirs):
-        brand_files = os.listdir(chunk_train_output_dirs[brand])
+    print('Extracting MFCCs...')
+    for i, brand in enumerate(chunk_output_dirs):
+        brand_files = os.listdir(chunk_output_dirs[brand])
 
         # Loop over each audio file in the brand folder
         for file in brand_files:
@@ -116,7 +90,7 @@ def extract_mfccs():
             #file_no_ext = re.split(r'.' + AUDIO_FILE_EXT, file)[0]
 
             # Load the audio file
-            file_path = r'{}/{}'.format(chunk_train_output_dirs[brand], file)
+            file_path = r'{}/{}'.format(chunk_output_dirs[brand], file)
             signal, sr = librosa.load(file_path, sr=sample_rate)
 
             # Extract the MFCCs from the file
@@ -128,30 +102,6 @@ def extract_mfccs():
                 data['train']['mfcc'].append(mfcc)
                 data['train']['labels'].append(i)
                 data['train']['category'].append(brand)
-
-    # Loop over each brand in the cut audio test folder
-    print('Extracting testing MFCCs...')
-    for i, brand in enumerate(chunk_test_output_dirs):
-        brand_files = os.listdir(chunk_test_output_dirs[brand])
-
-        # Loop over each audio file in the brand folder
-        for file in brand_files:
-            # Get the file name without the extension
-            # file_no_ext = re.split(r'.' + AUDIO_FILE_EXT, file)[0]
-
-            # Load the audio file
-            file_path = r'{}/{}'.format(chunk_test_output_dirs[brand], file)
-            signal, sr = librosa.load(file_path, sr=sample_rate)
-
-            # Extract the MFCCs from the file
-            mfcc = librosa.feature.mfcc(y=signal, sr=sr, n_fft=n_fft, n_mfcc=n_mfcc, hop_length=hop_length)
-            mfcc = mfcc.T.tolist()
-
-            # Ensure that all snippets have the same length
-            if len(mfcc) == expected_num_mfcc_vectors:
-                data['test']['mfcc'].append(mfcc)
-                data['test']['labels'].append(i)
-                data['test']['category'].append(brand)
 
     # Save the MFCC data
     # If the output directory doesn't exist, create it
@@ -167,35 +117,22 @@ if __name__ == '__main__':
     chunk_output_dir = args.chunkoutputdir
     mfcc_output_dir = args.mfccoutputdir
 
-    chunk_train_output_dir = fr'{chunk_output_dir}/train'
-    chunk_test_output_dir = fr'{chunk_output_dir}/test'
+    #chunk_train_output_dir = fr'{chunk_output_dir}/train'
+    #chunk_test_output_dir = fr'{chunk_output_dir}/test'
 
-    raw_train_audio_dirs = {
-        "Lexus": r'{}/Lexus/train'.format(audio_dir),
-        "Nissan": r'{}/Nissan/train'.format(audio_dir),
-        "Scion": r'{}/Scion/train'.format(audio_dir),
-        "Toyota": r'{}/Toyota/train'.format(audio_dir)
+    # UPDATE THESE WITH FOLDERS FOR THE NEW BRANDS
+    raw_audio_dirs = {
+        "Lexus": r'{}/Lexus'.format(audio_dir),
+        "Nissan": r'{}/Nissan'.format(audio_dir),
+        "Scion": r'{}/Scion'.format(audio_dir),
+        "Toyota": r'{}/Toyota'.format(audio_dir)
     }
 
-    raw_test_audio_dirs = {
-        "Lexus": r'{}/Lexus/test'.format(audio_dir),
-        "Nissan": r'{}/Nissan/test'.format(audio_dir),
-        "Scion": r'{}/Scion/test'.format(audio_dir),
-        "Toyota": r'{}/Toyota/test'.format(audio_dir)
-    }
-
-    chunk_train_output_dirs = {
-        "Lexus": r'{}/train/Lexus'.format(chunk_output_dir),
-        "Nissan": r'{}/train/Nissan'.format(chunk_output_dir),
-        "Scion": r'{}/train/Scion'.format(chunk_output_dir),
-        "Toyota": r'{}/train/Toyota'.format(chunk_output_dir)
-    }
-
-    chunk_test_output_dirs = {
-        "Lexus": r'{}/test/Lexus'.format(chunk_output_dir),
-        "Nissan": r'{}/test/Nissan'.format(chunk_output_dir),
-        "Scion": r'{}/test/Scion'.format(chunk_output_dir),
-        "Toyota": r'{}/test/Toyota'.format(chunk_output_dir)
+    chunk_output_dirs = {
+        "Lexus": r'{}/Lexus'.format(chunk_output_dir),
+        "Nissan": r'{}/Nissan'.format(chunk_output_dir),
+        "Scion": r'{}/Scion'.format(chunk_output_dir),
+        "Toyota": r'{}/Toyota'.format(chunk_output_dir)
     }
 
     mfcc_output_dirs = {
