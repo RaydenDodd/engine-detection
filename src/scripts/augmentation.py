@@ -3,6 +3,7 @@ import random
 import argparse
 import numpy as np
 import librosa
+import audiomentations
 import soundfile as sf
 from scipy.signal import butter, filtfilt
 
@@ -15,8 +16,8 @@ def parse_cli():
 
 
 def random_gain(audio_data, sample_rate):
-    # Generate a random gain factor between 0.5 and 1.5
-    gain = np.random.uniform(0.5, 1.5)
+    # Generate a random gain factor between 0.01 and 0.3
+    gain = np.random.uniform(0.01, 0.3)
 
     # Apply the random gain to the audio data
     audio_data_with_gain = audio_data * gain
@@ -28,28 +29,29 @@ def random_gain(audio_data, sample_rate):
 
 def noise_addition(audio_data, sample_rate):
     # Generate random noise with the same length as the audio data
-    noise = np.random.normal(0, 0.1, len(audio_data))  # Adjust the second parameter for noise intensity
+    noise = np.random.normal(0.05, 0.2, len(audio_data))  # Adjust the second parameter for noise intensity
 
     # Add the noise to the audio data
-    audio_data_with_noise = audio_data + noise
+    audio_data_with_noise = audio_data.transpose() + noise
 
     # You can optionally clip the audio to ensure it stays within the valid range [-1, 1]
     audio_data_with_noise = np.clip(audio_data_with_noise, -1.0, 1.0)
-    return audio_data_with_noise
+    return audio_data_with_noise.transpose()
 
 
 def time_stretching(audio_data, sample_rate):
     # Define the stretch factor (1.0 means no stretching)
-    stretch_factor = random.uniform(1.1, 1.8)  # Adjust this value as needed
+    stretch_factor = random.uniform(1.05, 1.5)  # Adjust this value as needed
 
     # Apply time stretching
     audio_data_stretched = librosa.effects.time_stretch(audio_data, rate=stretch_factor)
+
     return audio_data_stretched
 
 
 def pitch_shifting(audio_data, sample_rate):
-    max_pitch_shift = 7
-    min_pitch_shift = -7
+    max_pitch_shift = 5
+    min_pitch_shift = 0.1
     # Define the pitch shift amount in semitones (positive value for increase, negative for decrease)
     pitch_shift_amount = random.uniform(min_pitch_shift, max_pitch_shift)  # Adjust this value as needed
 
@@ -62,7 +64,7 @@ def highpass_filter(audio_data, sample_rate):
     order = 5
     # Apply high-pass filtering with cutoff frequency 20 Hz to 20 kHz
     min_cutoff = 1000
-    max_cutoff = 2000
+    max_cutoff = 2500
     cutoff_freq = random.uniform(min_cutoff, max_cutoff)  # Adjust this value as needed
 
     nyquist = 0.5 * sample_rate
@@ -76,19 +78,19 @@ def highpass_filter(audio_data, sample_rate):
 def lowpass_filter(audio_data, sample_rate):
     order = 5
     # Apply high-pass filtering with cutoff frequency 20 Hz to 20 kHz
-    min_cutoff = 1000
-    max_cutoff = 2000
+    min_cutoff = 18000
+    max_cutoff = 20000
     cutoff_freq = random.uniform(min_cutoff, max_cutoff)  # Adjust this value as needed
     nyquist = 0.5 * sample_rate
     normal_cutoff = cutoff_freq / nyquist
-    b, a = butter(order, normal_cutoff, btype='high', analog=False)
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
 
     filtered_audio_data = filtfilt(b, a, audio_data)
     return filtered_audio_data
 
 
 def apply_augmentation():
-    functions = [random_gain, noise_addition, time_stretching, highpass_filter, lowpass_filter]
+    functions = [random_gain, noise_addition, pitch_shifting, highpass_filter, lowpass_filter]
     sample_rate = 48000
 
     for i, brand in enumerate(augment_output_dirs):
@@ -99,14 +101,14 @@ def apply_augmentation():
         audio_files = [file for file in os.listdir(augment_output_dirs[brand]) if file.endswith(('.wav', '.mp3', '.ogg', '.flac', '.WAV'))]
 
         # IMPORTANT: Change number of audio files to calculate the number of samples to create for each audio file
-        samples_per_file = 10 // len(audio_files)
+        samples_per_file = 5
 
         # Loop over each audio file in the brand folder
         for file in brand_files:
             if file.endswith(".mp3") or file.endswith(".wav") or file.endswith(".ogg") or file.endswith(".WAV"):  # Add more extensions if needed
                 # Load the audio file
                 file_path = r'{}/{}'.format(augment_output_dirs[brand], file)
-                signal, sr = librosa.load(file_path, sr=sample_rate)
+                signal, sr = librosa.load(file_path, sr=sample_rate, mono=False)
 
                 output_folder = r'{}/augmented_{}_files'.format(augment_output_dirs[brand], brand)
                 print(output_folder)
@@ -115,22 +117,18 @@ def apply_augmentation():
                     # If the folder doesn't exist, create it
                     os.makedirs(output_folder)
 
-                for j in range(samples_per_file):
-                    # Define the number of augmentations to apply (randomly between 1 and 3)
-                    num_augmentations = random.randint(1, 3)
+                for j, augmentation_function in enumerate(functions):
+                    try:
+                        augmented_audio_data = augmentation_function(signal, sample_rate)
 
-                    # Randomly select augmentation functions
-                    selected_augmentations = random.sample(functions, num_augmentations)
-
-                    # Apply selected augmentations to the audio file
-                    augmented_audio_data = signal  # Initialize with original audio data
-                    for augmentation_function in selected_augmentations:
-                        augmented_audio_data = augmentation_function(augmented_audio_data, sr)
-
-                    output_file_path = r'{}/{}_{}_{}.wav'.format(output_folder, os.path.splitext(file)[0], '_'.join(func.__name__ for func in selected_augmentations),j)
-                    # Save the augmented audio data to a new file using soundfile
-                    print('Saving to: ' + output_file_path)
-                    sf.write(output_file_path, augmented_audio_data, sample_rate)
+                        output_file_path = r'{}/{}_{}_{}.WAV'.format(output_folder, os.path.splitext(file)[0], augmentation_function.__name__, j)
+                        # Save the augmented audio data to a new file using soundfile
+                        print('Saving to: ' + output_file_path)
+                        sf.write(output_file_path, augmented_audio_data.transpose(), sample_rate, subtype='FLOAT')
+                    except Exception as e:
+                        # Handle the error gracefully
+                        print(f"Error occurred while applying augmentation function {j}: {e}")
+                        continue  # Skip to the next iteration
 
 
 if __name__ == '__main__':
@@ -140,15 +138,32 @@ if __name__ == '__main__':
 
     augment_output_dirs = {
         "Audi": r'audio/Audi'.format(augment_output_dir),
+        "BMW": r'audio/BMW'.format(augment_output_dir),
         "Chevrolet": r'audio/Chevrolet'.format(augment_output_dir),
+        "Chevrolet (GMC)": r'audio/Chevrolet (GMC)'.format(augment_output_dir),
+        "Chrysler (Jeep)": r'audio/Chrysler (Jeep)'.format(augment_output_dir),
+        "Ford": r'audio/Ford'.format(augment_output_dir),
+        "GMC": r'audio/GMC'.format(augment_output_dir),
         "Honda": r'audio/Honda'.format(augment_output_dir),
         "Hyundai": r'audio/Hyundai'.format(augment_output_dir),
+        "Infiniti (Nissan)": r'audio/Infiniti (Nissan)'.format(augment_output_dir),
+        "Jeep": r'audio/Jeep'.format(augment_output_dir),
         "Kia": r'audio/Kia'.format(augment_output_dir),
         "Lexus": r'audio/Lexus'.format(augment_output_dir),
+        "Mazda": r'audio/Mazda'.format(augment_output_dir),
+        "Mercedes-Benz": r'audio/Mercedes-Benz'.format(augment_output_dir),
+        "Mitsubishi": r'audio/Mitsubishi'.format(augment_output_dir),
         "Nissan": r'audio/Nissan'.format(augment_output_dir),
+        "Saturn": r'audio/Saturn'.format(augment_output_dir),
         "Scion": r'audio/Scion'.format(augment_output_dir),
+        "Scion (Toyota)": r'audio/Scion (Toyota)'.format(augment_output_dir),
+        "Subaru": r'audio/Subaru'.format(augment_output_dir),
+        "Suzuki": r'audio/Suzuki'.format(augment_output_dir),
         "Toyota": r'audio/Toyota'.format(augment_output_dir),
-        "Volkswagen": r'audio/Volkswagen'.format(augment_output_dir)
+        "Volkswagen": r'audio/Volkswagen'.format(augment_output_dir),
+        "Volvo": r'audio/Volvo'.format(augment_output_dir),
     }
 
     apply_augmentation()
+
+
