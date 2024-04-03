@@ -25,6 +25,7 @@ TRAIN_CHANCE = 0.8
 
 def parse_cli():
     parser = argparse.ArgumentParser(description='A tool for extracting MFCCs from audio files')
+    parser.add_argument('-n', '--num_mfccs', type=str, help='The number of MFCCs to extract per timestep')
     parser.add_argument('-a', '--audiodir', type=str, help='The relative path to the directory containing folders with raw audio files')
     parser.add_argument('-c', '--chunkoutputdir', type=str, help='The relative path to the directory that should contain folders with chunked audio files')
     parser.add_argument('-m', '--mfccoutputdir', type=str, help='The relative path to the directory that should contain folders with mfccs extracted from the chunked audio files')
@@ -73,8 +74,12 @@ def extract_mfccs():
         "test": {"mfcc": [], "labels": [], "category": []},
     }
 
+    # Check if the output dir is present and create it if needed
+    if not os.path.exists(r'{}'.format(mfcc_output_dir)):
+        os.makedirs(r'{}'.format(mfcc_output_dir))
+
     sample_rate = 48000
-    n_mfcc = 13
+    n_mfcc = num_mfccs
     n_fft = 2048
     hop_length = 512
     expected_num_mfcc_vectors = math.ceil(sample_rate / hop_length)
@@ -116,29 +121,45 @@ if __name__ == '__main__':
     audio_dir = args.audiodir
     chunk_output_dir = args.chunkoutputdir
     mfcc_output_dir = args.mfccoutputdir
+    num_mfccs = int(args.num_mfccs)
 
-    #chunk_train_output_dir = fr'{chunk_output_dir}/train'
-    #chunk_test_output_dir = fr'{chunk_output_dir}/test'
-
-    # UPDATE THESE WITH FOLDERS FOR THE NEW BRANDS
+    # Note: These have been updated for audio of the top 10 car brands in the USA
     raw_audio_dirs = {
-        "Lexus": r'{}/Lexus'.format(audio_dir),
+        "BMW": r'{}/BMW'.format(audio_dir),
+        "Ford": r'{}/Ford'.format(audio_dir),
+        "GMC": r'{}/GMC'.format(audio_dir),
+        "Honda": r'{}/Honda'.format(audio_dir),
+        "Hyundai": r'{}/Hyundai'.format(audio_dir),
+        "Jeep": r'{}/Jeep'.format(audio_dir),
+        "Kia": r'{}/Kia'.format(audio_dir),
         "Nissan": r'{}/Nissan'.format(audio_dir),
-        "Scion": r'{}/Scion'.format(audio_dir),
+        "Subaru": r'{}/Subaru'.format(audio_dir),
         "Toyota": r'{}/Toyota'.format(audio_dir)
     }
 
     chunk_output_dirs = {
-        "Lexus": r'{}/Lexus'.format(chunk_output_dir),
+        "BMW": r'{}/BMW'.format(chunk_output_dir),
+        "Ford": r'{}/Ford'.format(chunk_output_dir),
+        "GMC": r'{}/GMC'.format(chunk_output_dir),
+        "Honda": r'{}/Honda'.format(chunk_output_dir),
+        "Hyundai": r'{}/Hyundai'.format(chunk_output_dir),
+        "Jeep": r'{}/Jeep'.format(chunk_output_dir),
+        "Kia": r'{}/Kia'.format(chunk_output_dir),
         "Nissan": r'{}/Nissan'.format(chunk_output_dir),
-        "Scion": r'{}/Scion'.format(chunk_output_dir),
+        "Subaru": r'{}/Subaru'.format(chunk_output_dir),
         "Toyota": r'{}/Toyota'.format(chunk_output_dir)
     }
 
     mfcc_output_dirs = {
-        "Lexus": r'{}/Lexus'.format(mfcc_output_dir),
+        "BMW": r'{}/BMW'.format(mfcc_output_dir),
+        "Ford": r'{}/Ford'.format(mfcc_output_dir),
+        "GMC": r'{}/GMC'.format(mfcc_output_dir),
+        "Honda": r'{}/Honda'.format(mfcc_output_dir),
+        "Hyundai": r'{}/Hyundai'.format(mfcc_output_dir),
+        "Jeep": r'{}/Jeep'.format(mfcc_output_dir),
+        "Kia": r'{}/Kia'.format(mfcc_output_dir),
         "Nissan": r'{}/Nissan'.format(mfcc_output_dir),
-        "Scion": r'{}/Scion'.format(mfcc_output_dir),
+        "Subaru": r'{}/Subaru'.format(mfcc_output_dir),
         "Toyota": r'{}/Toyota'.format(mfcc_output_dir)
     }
 
