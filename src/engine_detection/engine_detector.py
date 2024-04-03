@@ -39,17 +39,27 @@ class EngineDetector:
         # Test a file not used in training or testing
         mfcc = self.extract_features(file_path)
 
+        #predictions = []
+
+        #for mfcc in mfccs:
+        #    reshaped = mfcc.reshape(1, -1)
+        #    test_features = self.scaler.transform(reshaped)
+        #    predictions.append(self.model.predict(test_features))
+
+        #return 1 in predictions
+
         # Calculate mean MFCC
-        mean_mfcc = np.mean(mfcc, axis=0)  
+        mean_mfcc = np.mean(mfcc, axis=0)
 
         # Correcting the shape for scaler.transform
-        mean_mfcc_reshaped = mean_mfcc.reshape(1, -1)  
+        mean_mfcc_reshaped = mean_mfcc.reshape(1, -1)
 
         # Use the reshaped array
-        test_features = self.scaler.transform(mean_mfcc_reshaped)  
+        test_features = self.scaler.transform(mean_mfcc_reshaped)
 
         # Predict the class for the new audio
-        return bool(self.model.predict(test_features))
+        prediction = self.model.predict(test_features)
+        return bool(prediction)
 
 
 # detector = EngineDetector()

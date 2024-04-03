@@ -13,7 +13,7 @@ from engine_detection.engine_detector import EngineDetector
 from engine_detection.mfcc_extractor import MFCCExtractor
 from engine_detection.sound_recorder import SoundRecorder
 
-RECORDING_LENGTH = 1  # in seconds
+RECORDING_LENGTH = 5  # in seconds
 
 class GUI(QMainWindow):
 
@@ -115,25 +115,35 @@ class GUI(QMainWindow):
         }
 
         # Set up the temp directory
-        if not os.path.exists(r'eng_temp/'):
-            os.makedirs(r'eng_temp/')
+        self.current_script_dir = os.path.dirname(__file__)
+        self.temp_dir = os.path.join(self.current_script_dir, '..', 'eng_temp/')
+
+        if not os.path.exists(self.temp_dir):
+            os.makedirs(self.temp_dir)
         else:
-            shutil.rmtree(r'eng_temp/cut_audio')
-            os.makedirs(r'eng_temp/cut_audio')
+            shutil.rmtree(os.path.join(self.temp_dir, 'cut_audio'))
+            os.makedirs(os.path.join(self.temp_dir, 'cut_audio'))
 
     def __process_loop(self):
         while self.continue_flag:
             print("Processing")
             # Record 5 seconds of audio, then save it
-            #recording = self.microphone.record(RECORDING_LENGTH)
-            #SoundRecorder.preprocess(recording, 1, 48000)
+            recording = self.microphone.record(RECORDING_LENGTH)
+
+            # If we failed to get a recording, exit immediately
+            if recording is None:
+                break
+
+            SoundRecorder.preprocess(recording, 2, 48000)
 
 
             # Our audio file is saved as output.wav in the current working directory
             # Feed the audio into the engine detector. If nothing is detected, don't
             # feed it into the neural network
-            if not self.detector.detect("output.wav"):
-                continue
+            #if not self.detector.detect(os.path.join(self.temp_dir, 'output.wav')):
+            #    print('No engine detected')
+            #    continue
+            #wprint('Engine detected!')
 
             # Extract the MFCCs from the file that was saved,
             # then feed them into the engine classifier

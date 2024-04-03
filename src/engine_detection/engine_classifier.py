@@ -16,7 +16,10 @@ from pydub.utils import make_chunks
 class EngineClassifier:
 
     def __init__(self):
-        self.model = tf.keras.models.load_model('engine_detect.keras')
+        # Get the directory of the current script
+        self.current_script_dir = os.path.dirname(__file__)
+        model_path = os.path.join(self.current_script_dir, '..', 'trained_models', 'engine_detect.keras')
+        self.model = tf.keras.models.load_model(model_path)
 
     def classify(self, mfccs):
         return self.model.predict(mfccs)

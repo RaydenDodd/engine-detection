@@ -1,3 +1,4 @@
+import sounddevice
 import sounddevice as sd
 import librosa
 from pydub import AudioSegment
@@ -23,7 +24,15 @@ class SoundRecorder:
             raise ValueError('Device index not set')
 
         sd.default.device = self.device_id
-        recording = sd.rec(int(duration * SAMPLE_RATE), samplerate=SAMPLE_RATE, channels=1)
+        try:
+            recording = sd.rec(int(duration * SAMPLE_RATE), samplerate=SAMPLE_RATE, channels=NUM_CHANNELS)
+        except sounddevice.PortAudioError:  # Microphone couldn't record in 2-channel mode
+            try:
+                recording = sd.rec(int(duration * SAMPLE_RATE), samplerate=SAMPLE_RATE, channels=1)
+            except sounddevice.PortAudioError:
+                print('Device is not a microphone')
+                return None
+
         sd.wait()
         return recording
 
