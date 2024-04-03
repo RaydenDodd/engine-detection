@@ -25,10 +25,12 @@ TRAIN_CHANCE = 0.8
 
 def parse_cli():
     parser = argparse.ArgumentParser(description='A tool for extracting MFCCs from audio files')
-    parser.add_argument('-n', '--num_mfccs', type=str, help='The number of MFCCs to extract per timestep')
+    parser.add_argument('-n', '--num_mfccs', type=int, help='The number of MFCCs to extract per timestep')
     parser.add_argument('-a', '--audiodir', type=str, help='The relative path to the directory containing folders with raw audio files')
     parser.add_argument('-c', '--chunkoutputdir', type=str, help='The relative path to the directory that should contain folders with chunked audio files')
     parser.add_argument('-m', '--mfccoutputdir', type=str, help='The relative path to the directory that should contain folders with mfccs extracted from the chunked audio files')
+    parser.add_argument('-x', '--noslice', action='store_true', help='If enabled, the script will only extract MFCCs from the currently chunked audio files')
+
     return parser.parse_args()
 
 
@@ -121,7 +123,8 @@ if __name__ == '__main__':
     audio_dir = args.audiodir
     chunk_output_dir = args.chunkoutputdir
     mfcc_output_dir = args.mfccoutputdir
-    num_mfccs = int(args.num_mfccs)
+    num_mfccs = args.num_mfccs
+    noslice = args.noslice
 
     # Note: These have been updated for audio of the top 10 car brands in the USA
     raw_audio_dirs = {
@@ -163,5 +166,6 @@ if __name__ == '__main__':
         "Toyota": r'{}/Toyota'.format(mfcc_output_dir)
     }
 
-    slice_audio()
+    if not noslice:
+        slice_audio()
     extract_mfccs()
