@@ -13,6 +13,8 @@ import pandas as pd
 import math
 import random
 import pickle
+#NOTE: YOU NEED TO pip install joblib librosa PySoundFile scipy pydub tqdm numpy pandas
+ 
 #This file takes multiple input directorys that are strutrcued as folder of car brands
 #This file augments the audio, segments all the audio, creates a dataframe out of the segments, and extracts mfccs and saves them for the top 10 brands and all brands
 #NOTE: you can run this file multiple times it does not duplicate data it only does the augmentation and segmentation to new files in the input directory
