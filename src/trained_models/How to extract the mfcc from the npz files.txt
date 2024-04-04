@@ -1,0 +1,13 @@
+#open np arrays 
+
+Give the address where it is
+
+npz_file_path = os.path.join(base_dir, '..', 'trained_models', 'MFCC_top_10_brands')
+
+ with np.load(npz_file_path) as data:
+     features_2d = data['features_2d']
+     features_3d = data['features_3d']
+     labels = data['labels']
+     categorys= data['categorys']
+
+
