@@ -4,6 +4,7 @@ import sys
 import time
 
 import scipy
+import pickle
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QLabel, QPushButton, QComboBox, QVBoxLayout, QHBoxLayout
 from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import Qt
@@ -19,6 +20,8 @@ class GUI(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.script_path = os.path.abspath(__file__)
+        self.script_dir = os.path.dirname(self.script_path)
 
         # Create drop down menu for microphone
         mic_label = QLabel('Select Microphone:')
@@ -101,18 +104,15 @@ class GUI(QMainWindow):
         self.setCentralWidget(main_window)
 
         # Non-GUI setup
+        pickle_file_path = os.path.join(self.script_dir, '..', 'trained_models', 'label_to_category_all_mapping.pickle')
+        with open(pickle_file_path , 'rb') as file:
+            self.brands_mapping = pickle.load(file)
         self.continue_flag = False
         self.microphone = SoundRecorder()
         self.detector = EngineDetector()
         self.classifier = EngineClassifier()
         self.mfcc_extractor = MFCCExtractor()
-        self.brands = ['Lexus', 'Nissan', 'Scion', 'Toyota']
-        self.brands_image_dict = {
-            'Lexus': 'photos/lexus.png',
-            'Nissan': 'photos/nissan.png',
-            'Scion': 'photos/scion.png',
-            'Toyota': 'photos/toyota.png',
-        }
+        self.brands_image_dict = {brand_name: f'photos/{brand_name.lower()}.png' for brand_name in self.brands_mapping.values()}
 
         # Set up the temp directory
         self.current_script_dir = os.path.dirname(__file__)
@@ -160,15 +160,18 @@ class GUI(QMainWindow):
 
             #sorted_results = sorted(results_accumulator)
             sorted_results = sorted(range(len(results_accumulator)), key=lambda k: results_accumulator[k])
-            brand_1 = self.brands[sorted_results[-1]]
-            brand_2 = self.brands[sorted_results[-2]]
-            brand_3 = self.brands[sorted_results[-3]]
+            brand_1 = self.brands_mapping[sorted_results[-1]]
+            brand_2 = self.brands_mapping[sorted_results[-2]]
+            brand_3 = self.brands_mapping[sorted_results[-3]]
 
             # Update the GUI images
             self.__update_image_1(brand_1)
             self.__update_image_2(brand_2)
             self.__update_image_3(brand_3)
-
+            print("\nBRANDS")
+            print(brand_1)
+            print(brand_2)
+            print(brand_3)
             QApplication.processEvents()
 
 

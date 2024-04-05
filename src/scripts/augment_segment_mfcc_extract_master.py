@@ -371,7 +371,10 @@ def aggregate_features(results, set_of_brands=None):
             categorys.append(category)
             labels.append(label)
 
-    return np.array(features_3d), np.array(features_2d), np.array(labels), np.array(categorys), category_to_label
+    # Invert the category_to_label dictionary to get a label_to_category mapping
+    label_to_category = {v: k for k, v in category_to_label.items()}
+
+    return np.array(features_3d), np.array(features_2d), np.array(labels), np.array(categorys), label_to_category
 
 
 def save_features(features_2d, features_3d, labels, categorys, output_dir, filename, label_message):
@@ -496,20 +499,20 @@ def main(onedrive_enabaled, augmentation_enabled, dataframe_creation_enabled, fe
         results = extract_features_parallel(df)
 
         if set_brands is None:
-            features_3d_all, features_2d_all, labels_all, categorys_all, category_to_label_all = aggregate_features(results)
-            features_3d_top, features_2d_top, labels_top, categorys_top, category_to_label_top = aggregate_features(results, top_10_brands_set)
+            features_3d_all, features_2d_all, labels_all, categorys_all, label_to_category_all = aggregate_features(results)
+            features_3d_top, features_2d_top, labels_top, categorys_top, label_to_category_top = aggregate_features(results, top_10_brands_set)
 
             save_features(features_2d_all, features_3d_all, labels_all, categorys_all, mfcc_output_dir, f'{mfcc_filename}_all_brands', 'all brands')
             save_features(features_2d_top, features_3d_top, labels_top, categorys_top, mfcc_output_dir, f'{mfcc_filename}_top_10_brands', 'top 10 brands')
 
-            save_mapping(category_to_label_all, mfcc_output_dir, 'class_to_class_number_all')
-            save_mapping(category_to_label_top, mfcc_output_dir, 'class_to_class_number_top')
+            save_mapping(label_to_category_all, mfcc_output_dir, 'label_to_category_all')
+            save_mapping(label_to_category_top, mfcc_output_dir, 'label_to_category_top')
 
         else: 
-            features_3d_set, features_2d_set, labels_set, categorys_set, category_to_label_set = aggregate_features(results, set_brands)
+            features_3d_set, features_2d_set, labels_set, categorys_set, label_to_category_set = aggregate_features(results, set_brands)
 
             save_features(features_2d_set, features_3d_set, labels_set, categorys_set, mfcc_output_dir, f'{mfcc_filename}_set_brands', 'the specified set of brands')
-            save_mapping(category_to_label_top, mfcc_output_dir, 'class_to_class_number_set')
+            save_mapping(label_to_category_top, mfcc_output_dir, 'label_to_category_set')
     else:
         print("\n\n\nSkipping MFCC Extraction")
 

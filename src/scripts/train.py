@@ -1,10 +1,12 @@
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
+from tensorflow.keras.callbacks import EarlyStopping
 import numpy as np
 import os
 import json
 import argparse
-
+from sklearn.preprocessing import StandardScaler
+print(tf.__version__)
 
 def parse_cli():
     parser = argparse.ArgumentParser(description='A tool for extracting MFCCs from audio files')
@@ -40,6 +42,8 @@ if __name__ == '__main__':
     # If GPUs are available, set TensorFlow to use the first one
     if gpus:
         try:
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
             # Set TensorFlow to use only the first GPU
             tf.config.set_visible_devices(gpus[0], 'GPU')
             print("Using GPU:", gpus[0])
@@ -75,13 +79,17 @@ if __name__ == '__main__':
     # Turn the data into train and test sets
     (inputs_train, inputs_test, target_train, target_test) = train_test_split(inputs, targets,
                                                                               test_size=0.2, random_state=42)
+    
+    #data scaling betwen [0,1]
+    scaler = StandardScaler()
+    inputs_train = scaler.fit_transform(inputs_train.reshape(-1, inputs_train.shape[-1])).reshape(inputs_train.shape)
+    inputs_test = scaler.transform(inputs_test.reshape(-1, inputs_test.shape[-1])).reshape(inputs_test.shape)
 
-
-    print("Type of inputs_train:", type(inputs_train))
-    print("Data type of elements in inputs_train:", inputs_train.dtype)
-
-    print("Type of target_train:", type(target_train))
-    print("Data type of elements in target_train:", target_train.dtype)
+    # For CNN
+    inputs_train_expanded = np.expand_dims(inputs_train, -1)  # Expanding the last dimension after scaling
+    inputs_test_expanded = np.expand_dims(inputs_test, -1)
+    print("Shape of inputs_train:", inputs_train_expanded.shape)
+    print("Shape of inputs_test:", inputs_test_expanded.shape)
     # Specify the neural network's architecture
     model = tf.keras.Sequential([
         # Input layer
@@ -105,17 +113,49 @@ if __name__ == '__main__':
 
     ])
 
+    # Specify the CNN architecture
+    modelcnn = tf.keras.Sequential([
+        # Convolutional layer
+        tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation='relu', padding='same',
+                            input_shape=(inputs_train.shape[1], inputs_train.shape[2], 1)),
+        tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+
+        # Second convolutional layer with padding
+        tf.keras.layers.Conv2D(64, kernel_size=(3, 3), activation='relu', padding='same'),
+        tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+
+        # Flatten the output of the convolutional layers
+        tf.keras.layers.Flatten(),
+
+        # Dense hidden layer
+        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.Dropout(0.3),
+
+        # Output layer
+        tf.keras.layers.Dense(len(unique_targets), activation='softmax')
+    ])
+
     # Compile the network
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.000_1)
     model.compile(optimizer=optimizer, loss="sparse_categorical_crossentropy", metrics=["accuracy"])
     model.summary()
 
     # Train the network
+    early_stopping = EarlyStopping(
+        monitor='val_loss',     # Monitor the validation loss
+        patience=5,             # Number of epochs with no improvement after which training will be stopped
+        verbose=1,              # Output a message for each early stopping
+        restore_best_weights=True  # Restore model weights from the epoch with the best value of the monitored quantity
+    )
     model.fit(inputs_train, target_train,
               validation_data=(inputs_test, target_test),
               epochs=100,
-              batch_size=32)
+              batch_size=32,
+              callbacks=[early_stopping])
 
     # Save the model
-    model.save('engine_detect_rayden_test.keras')
+    model_path = os.path.join(script_dir, '..', 'trained_models', 'engine_detect_rayden_test_dnn_all_brands.keras')
+
+    # Save the model to the specified path
+    model.save(model_path)
     # model = keras.models.load_model('engine_detect.keras')
