@@ -415,6 +415,7 @@ def save_mapping(folder_to_class_number, output_dir, filename):
 
 
 def main(onedrive_enabaled, augmentation_enabled, dataframe_creation_enabled, feature_extraction_enabled, input_dirs, output_dir, mfcc_filename,mfcc_output_dir,segment_length_ms, n_mfcc, set_brands):
+    global N_MFCC, SEGMENT_LENGTH_MS, DURATION, EXPECTED_NUM_MFCC_VECTORS
     N_MFCC=n_mfcc
     SEGMENT_LENGTH_MS = segment_length_ms
     DURATION = segment_length_ms / 1000  # Duration in seconds
