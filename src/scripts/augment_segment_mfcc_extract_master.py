@@ -235,8 +235,11 @@ def process_directories(input_dirs, output_dir, functions):
     for dir_path, count in files_per_dir.items():
         print(f"Collected {count} files from {dir_path}")
     print(f"Done collecting all audio file paths: {len(audio_paths)}")
-    
-    print("\nBegining Paralized Augmentation and Segmentation")
+
+    if len(functions) != 0:
+        print("\nBeginning Parallelized Augmentation and Segmentation")
+    else:
+        print("\nBeginning Parallelized Segmentation")
     processed_files = []
     skipped_files = []
     failed_files = []
@@ -460,13 +463,14 @@ def main(onedrive_enabaled, augmentation_enabled, dataframe_creation_enabled, fe
 
     # Data Augmentation and Segmentation
     if augmentation_enabled:
-        print("\n\n\nbegining audio aumentation and segmentation")
+        print("\n\n\nBeginning audio augmentation and segmentation")
         # Define your directories and call the function...
         functions = [random_gain, noise_addition, pitch_shifting, highpass_filter, lowpass_filter]
 
         processed_files = process_directories(input_dirs, output_dir, functions)
     else:
-        print("\n\n\nSkipping audio aumentation and segmentation")
+        print("\n\n\nSkipping audio augmentation\nBeginning audio segmentation")
+        processed_files = process_directories(input_dirs, output_dir, [])
     
 
 
