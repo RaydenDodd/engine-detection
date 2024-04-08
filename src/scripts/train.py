@@ -83,18 +83,19 @@ def main(script_dir, mfcc_dir, mfcc_filename):
 
         # First hidden layer
         tf.keras.layers.Dense(704, activation="relu"),
-        # tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dropout(0.3),
 
         # Second hidden layer
         tf.keras.layers.Dense(224, activation="relu"),
-        # tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dropout(0.3),
 
         # Third hidden layer
         tf.keras.layers.Dense(672, activation="relu"),
-        # tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dropout(0.3),
 
         # Fourth hidden layer
         tf.keras.layers.Dense(992, activation='relu'),
+        tf.keras.layers.Dropout(0.3),
 
         # Output layer
         tf.keras.layers.Dense(len(unique_targets), activation="softmax")
