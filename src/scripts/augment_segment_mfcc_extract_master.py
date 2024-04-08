@@ -512,7 +512,7 @@ def main(onedrive_enabaled, augmentation_enabled, dataframe_creation_enabled, fe
             features_3d_set, features_2d_set, labels_set, categorys_set, label_to_category_set = aggregate_features(results, set_brands)
 
             save_features(features_2d_set, features_3d_set, labels_set, categorys_set, mfcc_output_dir, f'{mfcc_filename}_set_brands', 'the specified set of brands')
-            save_mapping(label_to_category_top, mfcc_output_dir, 'label_to_category_set')
+            save_mapping(label_to_category_set, mfcc_output_dir, 'label_to_category_set')
     else:
         print("\n\n\nSkipping MFCC Extraction")
 
@@ -521,9 +521,9 @@ def main(onedrive_enabaled, augmentation_enabled, dataframe_creation_enabled, fe
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Data augmentation, dataframe creation, and feature extraction")
     parser.add_argument('--one_drive', help='Enable onedrive if you want the script to fnd your one drive path', action='store_true', default=True)
-    parser.add_argument('--augment', help='Enable data augmentation and segmentation', action='store_true', default=True)
-    parser.add_argument('--create_df', help='Enable dataframe creation', action='store_true', default=True)
-    parser.add_argument('--extract_features', help='Enable feature extraction', action='store_true', default=True)
+    parser.add_argument('--augment', help='Disable data augmentation and segmentation', action='store_false', default=True)
+    parser.add_argument('--create_df', help='Disable dataframe creation', action='store_false', default=True)
+    parser.add_argument('--extract_features', help='Disable feature extraction', action='store_false', default=True)
     parser.add_argument('--input_dirs', nargs='+', help='List of input directories (DIR containing folders of brand names)(use absolute paths)', default=None)
     parser.add_argument('--output_dir', help='Output directory for segments (Will create a DIR containing folders of the same brand names from input_dir)(Use absolute paths)', default=None)
     parser.add_argument('--mfcc_filename', help='Change the file name of the mfcc output', default=None)
@@ -543,7 +543,6 @@ if __name__ == "__main__":
           f"OneDrive: {'Enabled' if args.one_drive else 'Disabled'}\n"
           f"Data Augmentation: {'Enabled' if args.augment else 'Disabled'}\n"
           f"Dataframe Creation: {'Enabled' if args.create_df else 'Disabled'}\n"
-          f"Feature Extraction: {'Enabled' if args.extract_features else 'Disabled'}\n"
           f"Feature Extraction: {'Enabled' if args.extract_features else 'Disabled'}\n"
           f"Mfcc Filename: {args.mfcc_filename}\n"
           f"N_MFCC: {args.n_mfcc}\n"
