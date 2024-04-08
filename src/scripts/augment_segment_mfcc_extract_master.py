@@ -448,13 +448,13 @@ def main(onedrive_enabaled, augmentation_enabled, dataframe_creation_enabled, fe
 
     # Setup input and output directories based on base_path
     if input_dirs is None:
-        input_dirs =  [os.path.join(team_drive_path, "audio"), os.path.join(team_drive_path, "online audio")]
+        input_dirs =  [os.path.join(base_path, "Full dataset (Cleaned and trimmed)")]
     if output_dir is None:
-        output_dir = os.path.join(team_drive_path, "segmented audio")
+        output_dir = os.path.join(base_path, "segmented audio")
 
     # Setup mfcc_output_dir
     if mfcc_output_dir is None:
-        mfcc_output_dir = os.path.join(script_dir, '..', 'trained_models')
+        mfcc_output_dir = os.path.join(base_path, '..', 'trained_models')
 
         print("\n\ninput_dirs directory set to:", input_dirs)
         print("output_dir directory set to:", output_dir)
