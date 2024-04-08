@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 print(tf.__version__)
 
 def parse_cli():
-    parser = argparse.ArgumentParser(description='A tool for extracting MFCCs from audio files')
+    parser = argparse.ArgumentParser(description='A script for training a neural network using MFCCs from audio data')
     parser.add_argument('-m', '--mfccdir', type=str,
                         help='The relative path to the directory that should contain the npz file with the MFCCs', default=None)  # Corrected 'default'
     parser.add_argument('-mf', '--mfcc_filename', type=str,
@@ -145,7 +145,6 @@ def main(script_dir, mfcc_dir, mfcc_filename):
 
 
 if __name__ == '__main__':
-    pass
     args = parse_cli()
     if args.mfccdir is None:
         mfcc_dir = os.path.join('..', 'trained_models')
