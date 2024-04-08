@@ -16,22 +16,7 @@ def parse_cli():
                         help='The filename of the MFCC you want to train on', default=None)  # Corrected 'default' and minor grammar
     return parser.parse_args()
 
-
-if __name__ == '__main__':
-    args = parse_cli()
-    if args.mfccdir is None:
-        mfcc_dir = os.path.join('..', 'trained_models')
-    else:
-        mfcc_dir = args.mfccdir
-    if args.mfcc_filename is None:
-        mfcc_filename = 'MFCC_all_brands.npz'
-    else:
-        mfcc_filename = args.mfcc_filename
-
-    script_path = os.path.abspath(__file__)
-    script_dir = os.path.dirname(script_path)
-    
-
+def main(script_dir, mfcc_dir, mfcc_filename):
     all_devices = tf.config.list_physical_devices()
     print("All devices:", all_devices)
 
@@ -79,8 +64,8 @@ if __name__ == '__main__':
     # Turn the data into train and test sets
     (inputs_train, inputs_test, target_train, target_test) = train_test_split(inputs, targets,
                                                                               test_size=0.2, random_state=42)
-    
-    #data scaling betwen [0,1]
+
+    # data scaling betwen [0,1]
     scaler = StandardScaler()
     inputs_train = scaler.fit_transform(inputs_train.reshape(-1, inputs_train.shape[-1])).reshape(inputs_train.shape)
     inputs_test = scaler.transform(inputs_test.reshape(-1, inputs_test.shape[-1])).reshape(inputs_test.shape)
@@ -97,16 +82,19 @@ if __name__ == '__main__':
         tf.keras.layers.Flatten(),
 
         # First hidden layer
-        tf.keras.layers.Dense(512, activation="relu"),
-        tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(704, activation="relu"),
+        # tf.keras.layers.Dropout(0.3),
 
         # Second hidden layer
-        tf.keras.layers.Dense(256, activation="relu"),
-        tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(224, activation="relu"),
+        # tf.keras.layers.Dropout(0.3),
 
         # Third hidden layer
-        tf.keras.layers.Dense(64, activation="relu"),
-        tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Dense(672, activation="relu"),
+        # tf.keras.layers.Dropout(0.3),
+
+        # Fourth hidden layer
+        tf.keras.layers.Dense(992, activation='relu'),
 
         # Output layer
         tf.keras.layers.Dense(len(unique_targets), activation="softmax")
@@ -117,7 +105,7 @@ if __name__ == '__main__':
     modelcnn = tf.keras.Sequential([
         # Convolutional layer
         tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation='relu', padding='same',
-                            input_shape=(inputs_train.shape[1], inputs_train.shape[2], 1)),
+                               input_shape=(inputs_train.shape[1], inputs_train.shape[2], 1)),
         tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
 
         # Second convolutional layer with padding
@@ -136,15 +124,15 @@ if __name__ == '__main__':
     ])
 
     # Compile the network
-    optimizer = tf.keras.optimizers.Adam(learning_rate=0.000_1)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.000_223_869)
     model.compile(optimizer=optimizer, loss="sparse_categorical_crossentropy", metrics=["accuracy"])
     model.summary()
 
     # Train the network
     early_stopping = EarlyStopping(
-        monitor='val_loss',     # Monitor the validation loss
-        patience=5,             # Number of epochs with no improvement after which training will be stopped
-        verbose=1,              # Output a message for each early stopping
+        monitor='val_loss',  # Monitor the validation loss
+        patience=5,  # Number of epochs with no improvement after which training will be stopped
+        verbose=1,  # Output a message for each early stopping
         restore_best_weights=True  # Restore model weights from the epoch with the best value of the monitored quantity
     )
     model.fit(inputs_train, target_train,
@@ -153,8 +141,26 @@ if __name__ == '__main__':
               batch_size=32,
               callbacks=[early_stopping])
 
-    # Save the model
-    model_path = os.path.join(script_dir, '..', 'trained_models', 'engine_detect_rayden_test_dnn_all_brands.keras')
+    return model
+
+
+if __name__ == '__main__':
+    pass
+    args = parse_cli()
+    if args.mfccdir is None:
+        mfcc_dir = os.path.join('..', 'trained_models')
+    else:
+        mfcc_dir = args.mfccdir
+    if args.mfcc_filename is None:
+        mfcc_filename = 'MFCC_all_brands.npz'
+    else:
+        mfcc_filename = args.mfcc_filename
+
+    script_path = os.path.abspath(__file__)
+    script_dir = os.path.dirname(script_path)
+
+    model = main(script_dir, mfcc_dir, mfcc_filename)
+    model_path = os.path.join(script_dir, '..', 'trained_models', 'engine_detect_dylan_test_10_brands.keras')
 
     # Save the model to the specified path
     model.save(model_path)
