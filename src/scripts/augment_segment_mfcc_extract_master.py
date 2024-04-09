@@ -42,6 +42,7 @@ N_FFT = 2048
 HOP_LENGTH = 512
 DURATION = SEGMENT_LENGTH_MS / 1000  # Duration in seconds, this will update if SEGMENT_LENGTH_MS changes
 EXPECTED_NUM_MFCC_VECTORS = math.ceil(SAMPLE_RATE * DURATION / HOP_LENGTH)
+SUPPORTED_AUDIO_EXTENSIONS = {'.WAV','.wav', '.mp3', '.m4a', '.flac', '.ogg'}
 
 
 top_10_brands_set = [
@@ -170,6 +171,9 @@ def lowpass_filter(audio_data, sample_rate):
 
 functions = [random_gain, noise_addition, pitch_shifting, highpass_filter, lowpass_filter]
 
+def is_audio_file(filename):
+    return os.path.splitext(filename)[1].lower() in SUPPORTED_AUDIO_EXTENSIONS 
+
 # Process file function
 def convert_m4a_to_wav(file_path, no_convert=False):  
     """
@@ -249,12 +253,14 @@ def process_directories(input_dirs, output_dir, functions, no_content):
     # Initialize lists to track conversion status
     converted_files = []
 
-    # Aggregate audio paths and count files per directory
+    # Aggregate audio paths and count files per directory, filtering for audio files
     audio_paths = []
     for input_dir in input_dirs:
         for root, _, files in os.walk(input_dir):
-            file_count = len(files)
-            audio_paths.extend([os.path.join(root, file) for file in files])
+            audio_files = [file for file in files if is_audio_file(file)]
+            file_count = len(audio_files)
+            audio_paths.extend([os.path.join(root, file) for file in audio_files])
+            # Update the count for the input directory
             files_per_dir[input_dir] += file_count
 
     # Print the file counts per input directory
@@ -351,16 +357,9 @@ def process_files_to_dataframe(path, output_dir):
 
 #MFCC extraction
 #############################################################################################
-def extract_features(audio_path, sample_rate, target_sample_rate, n_mfcc, n_fft, hop_length, expected_num_mfcc_vectors):
+def extract_features(audio_path, sample_rate, n_mfcc, n_fft, hop_length, expected_num_mfcc_vectors):
     # Load the audio
     signal, sr = librosa.load(audio_path, sr=sample_rate)
-    
-    # Resample the audio if the sample rate is different from the target sample rate
-    if sr != target_sample_rate:
-        print(f"resample file: {audio_path}")
-        signal = librosa.resample(signal, orig_sr=sr, target_sr=target_sample_rate)
-        sr = target_sample_rate
-
     # Extract MFCC features
     mfcc = librosa.feature.mfcc(y=signal, sr=sr, n_mfcc=n_mfcc, n_fft=n_fft, hop_length=hop_length)
     mfcc = mfcc.T
@@ -384,9 +383,9 @@ def extract_features_parallel_helper(row, sample_rate, n_mfcc, n_fft, hop_length
     audio_path = os.path.join(row['dir'], row['filename'])
     if os.path.exists(audio_path):
         mfcc = extract_features(audio_path, sample_rate, n_mfcc, n_fft, hop_length, expected_num_mfcc_vectors)
-        flattened_mfcc = np.mean(mfcc, axis=0)  # For 2D features
+        flattened_mfcc = np.mean(mfcc, axis=0)  # Assuming this line and below remain unchanged
         return mfcc, flattened_mfcc, row['class']
-    return None, None, None, None
+    return None, None, None
 
 def aggregate_features(results, set_of_brands=None):
     """
