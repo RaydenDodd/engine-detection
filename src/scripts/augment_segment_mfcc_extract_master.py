@@ -202,7 +202,7 @@ def process_and_segment_file(file_path, output_dir, functions, no_convert):
     already_processed = False
     for root, dirs, files in os.walk(output_dir):
         for file in files:
-            if base_filename in file:
+            if base_filename.lower() in file.lower():  # Compare in lowercase
                 already_processed = True
                 break
         if already_processed:
