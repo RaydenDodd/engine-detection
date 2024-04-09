@@ -1,17 +1,28 @@
+#script
 import argparse
-from joblib import Parallel, delayed
-import joblib
 import os
+from tqdm import tqdm #progress bar
+
+#sound files
 import librosa
 import soundfile as sf
+import ffmpeg
 from scipy.signal import butter, filtfilt
 from pydub import AudioSegment
-from tqdm import tqdm
-from concurrent.futures import ThreadPoolExecutor, as_completed
+
+
+#math
 import numpy as np
 import pandas as pd
 import math
 import random
+
+#multi thread and core
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import joblib
+from joblib import Parallel, delayed
+
+#Saving files 
 import pickle
 #NOTE: YOU NEED TO pip install joblib librosa PySoundFile scipy pydub tqdm numpy pandas
  
@@ -158,7 +169,25 @@ def lowpass_filter(audio_data, sample_rate):
 functions = [random_gain, noise_addition, pitch_shifting, highpass_filter, lowpass_filter]
 
 # Process file function
+def convert_m4a_to_wav(file_path):
+    """
+    Converts an .m4a file to .wav format with the same base filename, then deletes the original .m4a file.
+    Returns the new file path and conversion status.
+    """
+    if file_path.endswith('.m4a'):
+        wav_file_path = file_path.rsplit('.', 1)[0] + '.wav'
+        try:
+            ffmpeg.input(file_path).output(wav_file_path).run(overwrite_output=True , quiet=True)
+            os.remove(file_path)  # Remove the original .m4a file
+            return wav_file_path, "Converted"
+        except ffmpeg.Error as e:
+            return None, f"Conversion failed: {e}"
+    return file_path, "Not converted"
+
 def process_and_segment_file(file_path, output_dir, functions):
+    # Before opening a file, check if it's .m4a and then convert
+    file_path, conversion_status = convert_m4a_to_wav(file_path)
+
     filename = os.path.basename(file_path)
     base_filename, _ = os.path.splitext(filename)
     output_folder = os.path.join(output_dir, os.path.basename(os.path.dirname(file_path)))
@@ -177,7 +206,6 @@ def process_and_segment_file(file_path, output_dir, functions):
         return {"path": file_path, "status": "Skipped", "error": "Already processed"}
 
     os.makedirs(output_folder, exist_ok=True)
-    processed_info = {"path": file_path, "status": None, "error": None}
     try:    
         # Load the audio file
         signal, sr = librosa.load(file_path, sr=None, mono=False)
@@ -185,21 +213,17 @@ def process_and_segment_file(file_path, output_dir, functions):
         num_segments = int(np.floor(duration_in_ms / SEGMENT_LENGTH_MS))
 
         if num_segments == 0:
-            error_message = "Error: File shorter than segment length"
-            return {"path": file_path, "status": "Error", "error": error_message}
-
+            return {"path": file_path, "status": "Error", "error": "File shorter than segment length"}
 
         for i in range(num_segments):
             start_sample = int((i * SEGMENT_LENGTH_MS) / 1000 * sr)
             end_sample = int(((i + 1) * SEGMENT_LENGTH_MS) / 1000 * sr)
-
             segment_signal = signal[:, start_sample:end_sample] if signal.ndim > 1 else signal[start_sample:end_sample]
 
             # Save the original segment
             segment_filename = f"{base_filename}_seg_{i+1}.wav"
             segment_path = os.path.join(output_folder, segment_filename)
             sf.write(segment_path, segment_signal.T, sr)  # .T for correct shape if stereo
-            #print(f"Segment {i+1} saved: {segment_path}")
 
             # Apply augmentation functions to the segment
             for func_index, func in enumerate(functions, start=1):
@@ -208,18 +232,20 @@ def process_and_segment_file(file_path, output_dir, functions):
                 augmented_filename = f"{base_filename}_{func_name}_{func_index}_seg_{i + 1}.wav"
                 augmented_path = os.path.join(output_folder, augmented_filename)
                 sf.write(augmented_path, augmented_audio.T, sr)  # .T for correct shape if stereo
-                #print(f"Augmented segment {i+1} ({func_name}) saved: {augmented_path}")
 
-                
     except Exception as e:
-         return {"path": file_path, "status": "Error", "error": str(e)}
+        return {"path": file_path, "status": "Error", "error": str(e)}
     
-    return {"path": file_path, "status": "Processed", "error": None}
+    # Adding conversion_status to the return dict for additional feedback
+    return {"path": file_path, "status": "Processed", "error": None, "conversion_status": conversion_status}
 
 def process_directories(input_dirs, output_dir, functions):
     print(f"Starting segmentation process for files in {input_dirs} to {output_dir} with segment length of {SEGMENT_LENGTH_MS}ms...\n")
     # Initialize a dictionary to hold the count of files per directory
     files_per_dir = {input_dir: 0 for input_dir in input_dirs}
+    
+    # Initialize lists to track conversion status
+    converted_files = []
 
     # Aggregate audio paths and count files per directory
     audio_paths = []
@@ -227,8 +253,6 @@ def process_directories(input_dirs, output_dir, functions):
         for root, _, files in os.walk(input_dir):
             file_count = len(files)
             audio_paths.extend([os.path.join(root, file) for file in files])
-            # Update the count for the input directory
-            # Note: This assumes files directly under each input_dir are of interest. Adjust if counting in subdirectories is needed differently.
             files_per_dir[input_dir] += file_count
 
     # Print the file counts per input directory
@@ -240,9 +264,11 @@ def process_directories(input_dirs, output_dir, functions):
         print("\nBeginning Parallelized Augmentation and Segmentation")
     else:
         print("\nBeginning Parallelized Segmentation")
+    
     processed_files = []
     skipped_files = []
     failed_files = []
+    
     with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
         futures = {executor.submit(process_and_segment_file, audio_path, output_dir, functions): audio_path for audio_path in audio_paths}
         for future in tqdm(as_completed(futures), total=len(futures), desc="Processing"):
@@ -250,23 +276,34 @@ def process_directories(input_dirs, output_dir, functions):
             result = future.result()
             if result["status"] == "Processed":
                 processed_files.append(audio_path)
+                # Check for conversion status
+                if result.get("conversion_status") == "Converted":
+                    converted_files.append(audio_path)
             elif result["status"] == "Skipped":
                 skipped_files.append(audio_path)
             elif result["status"] == "Error":
                 failed_files.append((audio_path, result["error"]))
 
     print(f"\n\nOriginal files processed: {len(processed_files)}")
-    # for file in processed_files:
-    #     print(f"Processed: {file}")
-
     print(f"Original files skipped: {len(skipped_files)}")
-    # for file in skipped_files:
-    #     print(f"Skipped: {file}")
-
+    
     if failed_files:
         print("Failed to process the following files:")
         for file, error in failed_files:
             print(f"{file}: {error}")
+
+    # if processed_files:
+    #     print("process the following files:")
+    #     for file in processed_files:
+    #         print(f"{file}:")
+
+    # Reporting on converted files
+    if converted_files:
+        print(f"\nFiles converted from .m4a to .wav: {len(converted_files)}")
+        for file in converted_files:
+            print(file)
+    else:
+        print('\nNo converted mfa files')
 
     print("Completed.")
     return processed_files
@@ -454,7 +491,7 @@ def main(onedrive_enabaled, augmentation_enabled, dataframe_creation_enabled, fe
 
     # Setup mfcc_output_dir
     if mfcc_output_dir is None:
-        mfcc_output_dir = os.path.join(base_path, '..', 'trained_models')
+        mfcc_output_dir = os.path.join(script_dir, '..', 'trained_models')
 
         print("\n\ninput_dirs directory set to:", input_dirs)
         print("output_dir directory set to:", output_dir)
