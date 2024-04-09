@@ -349,29 +349,29 @@ def process_files_to_dataframe(path, output_dir):
 
 #MFCC extraction
 #############################################################################################
-def extract_features(audio_path):
-    signal, sr = librosa.load(audio_path, sr=SAMPLE_RATE)
-    mfcc = librosa.feature.mfcc(y=signal, sr=sr, n_mfcc=N_MFCC, n_fft=N_FFT, hop_length=HOP_LENGTH)
+def extract_features(audio_path, sample_rate, n_mfcc, n_fft, hop_length, expected_num_mfcc_vectors):
+    signal, sr = librosa.load(audio_path, sr=sample_rate)
+    mfcc = librosa.feature.mfcc(y=signal, sr=sr, n_mfcc=n_mfcc, n_fft=n_fft, hop_length=hop_length)
     mfcc = mfcc.T
 
-    if len(mfcc) > EXPECTED_NUM_MFCC_VECTORS:
-        mfcc = mfcc[:EXPECTED_NUM_MFCC_VECTORS]
-    elif len(mfcc) < EXPECTED_NUM_MFCC_VECTORS:
-        padding = EXPECTED_NUM_MFCC_VECTORS - len(mfcc)
+    if len(mfcc) > expected_num_mfcc_vectors:
+        mfcc = mfcc[:expected_num_mfcc_vectors]
+    elif len(mfcc) < expected_num_mfcc_vectors:
+        padding = expected_num_mfcc_vectors - len(mfcc)
         mfcc = np.pad(mfcc, ((0, padding), (0, 0)), mode='constant')
 
     return mfcc
 
-def extract_features_parallel(data):
+def extract_features_parallel(data, sample_rate, n_mfcc, n_fft, hop_length, expected_num_mfcc_vectors):
     results = joblib.Parallel(n_jobs=-1)(
-        joblib.delayed(extract_features_parallel_helper)(row) for _, row in tqdm(data.iterrows(), total=data.shape[0], desc="Extracting features")
+        joblib.delayed(extract_features_parallel_helper)(row, sample_rate, n_mfcc, n_fft, hop_length, expected_num_mfcc_vectors) for _, row in tqdm(data.iterrows(), total=data.shape[0], desc="Extracting features")
     )
     return results
 
-def extract_features_parallel_helper(row):
+def extract_features_parallel_helper(row, sample_rate, n_mfcc, n_fft, hop_length, expected_num_mfcc_vectors):
     audio_path = os.path.join(row['dir'], row['filename'])
     if os.path.exists(audio_path):
-        mfcc = extract_features(audio_path)
+        mfcc = extract_features(audio_path, sample_rate, n_mfcc, n_fft, hop_length, expected_num_mfcc_vectors)
         flattened_mfcc = np.mean(mfcc, axis=0)  # For 2D features
         return mfcc, flattened_mfcc, row['class']
     return None, None, None, None
@@ -538,7 +538,7 @@ def main(onedrive_enabaled, augmentation_enabled, dataframe_creation_enabled, fe
             print("Loading csv")
             df = pd.read_csv('dataframe.csv')
 
-        results = extract_features_parallel(df)
+        results = extract_features_parallel(df, SAMPLE_RATE, N_MFCC, N_FFT, HOP_LENGTH, EXPECTED_NUM_MFCC_VECTORS)
 
         if set_brands is None:
             features_3d_all, features_2d_all, labels_all, categorys_all, label_to_category_all = aggregate_features(results)
