@@ -10,3 +10,4 @@ scipy
 PyQt5
 audiomentations
 pandas
+ffmpeg

@@ -63,7 +63,7 @@ def main(script_dir, mfcc_dir, mfcc_filename):
     print("Shape of input:", inputs.shape)
     # Turn the data into train and test sets
     (inputs_train, inputs_test, target_train, target_test) = train_test_split(inputs, targets,
-                                                                              test_size=0.2, random_state=42)
+                                                                              test_size=0.2)
 
     # data scaling betwen [0,1]
     scaler = StandardScaler()
@@ -160,7 +160,7 @@ if __name__ == '__main__':
     script_dir = os.path.dirname(script_path)
 
     model = main(script_dir, mfcc_dir, mfcc_filename)
-    model_path = os.path.join(script_dir, '..', 'trained_models', 'engine_detect_dylan_test_10_brands.keras')
+    model_path = os.path.join(script_dir, '..', 'trained_models', 'engine_classify.keras')
 
     # Save the model to the specified path
     model.save(model_path)
