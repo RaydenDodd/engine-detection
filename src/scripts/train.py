@@ -65,10 +65,12 @@ def main(script_dir, mfcc_dir, mfcc_filename):
     (inputs_train, inputs_test, target_train, target_test) = train_test_split(inputs, targets,
                                                                               test_size=0.2)
 
+    # NOTE: Adding this scaling seriously hinders the model's performance for some reason
+    # With the scaling, the model isn't able to perform even basic binary classification tasks
     # data scaling betwen [0,1]
-    scaler = StandardScaler()
-    inputs_train = scaler.fit_transform(inputs_train.reshape(-1, inputs_train.shape[-1])).reshape(inputs_train.shape)
-    inputs_test = scaler.transform(inputs_test.reshape(-1, inputs_test.shape[-1])).reshape(inputs_test.shape)
+    #scaler = StandardScaler()
+    #inputs_train = scaler.fit_transform(inputs_train.reshape(-1, inputs_train.shape[-1])).reshape(inputs_train.shape)
+    #inputs_test = scaler.transform(inputs_test.reshape(-1, inputs_test.shape[-1])).reshape(inputs_test.shape)
 
     # For CNN
     inputs_train_expanded = np.expand_dims(inputs_train, -1)  # Expanding the last dimension after scaling
@@ -82,19 +84,15 @@ def main(script_dir, mfcc_dir, mfcc_filename):
         tf.keras.layers.Flatten(),
 
         # First hidden layer
-        tf.keras.layers.Dense(704, activation="relu"),
+        tf.keras.layers.Dense(512, activation='relu'),
         tf.keras.layers.Dropout(0.3),
 
         # Second hidden layer
-        tf.keras.layers.Dense(224, activation="relu"),
+        tf.keras.layers.Dense(256, activation='relu'),
         tf.keras.layers.Dropout(0.3),
 
         # Third hidden layer
-        tf.keras.layers.Dense(672, activation="relu"),
-        tf.keras.layers.Dropout(0.3),
-
-        # Fourth hidden layer
-        tf.keras.layers.Dense(992, activation='relu'),
+        tf.keras.layers.Dense(128, activation="relu"),
         tf.keras.layers.Dropout(0.3),
 
         # Output layer
