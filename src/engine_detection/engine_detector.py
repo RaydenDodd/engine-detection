@@ -3,6 +3,8 @@ import math
 import numpy as np
 import librosa
 from joblib import dump, load
+from collections import deque
+
 SAMPLE_RATE = 48000
 N_MFCC = 13
 N_FFT = 2048
@@ -23,6 +25,9 @@ class EngineDetector:
         # Load the model and scaler using the full paths
         self.model_pipline = load(model_path)
 
+        # Initialize a deque with a maximum length of 5 to store the last 5 predictions
+        self.last_predictions = deque(maxlen=5)
+
     # Extract Audio Features
     def extract_features(audio_path):
         signal, sr = librosa.load(audio_path, sr=SAMPLE_RATE)
@@ -38,9 +43,7 @@ class EngineDetector:
 
     # Return true if file is detected as an engine
     def detect(self, filename):
-            
         file_path = os.path.join(self.current_script_dir, filename)
-        print(file_path)
         # Test a file not used in training or testing
         mfcc = self.extract_features(file_path)
 
@@ -51,8 +54,13 @@ class EngineDetector:
         mean_mfcc_reshaped = mean_mfcc.reshape(1, -1)
 
         # Predict the class for the new audio
-        prediction = self.model_pipline.predict(mean_mfcc_reshaped)
-        return bool(prediction)
+        prediction = self.model_pipeline.predict(mean_mfcc_reshaped)[0]  # Ensure to get the first item in prediction array
+
+        # Update the deque with the new prediction
+        self.last_predictions.append(prediction)
+
+        # Check if the deque is full and all values are 1
+        return len(self.last_predictions) == 5 and all(pred == 1 for pred in self.last_predictions)
 
 
 # detector = EngineDetector()
