@@ -1,5 +1,7 @@
 import threading
 from collections import deque
+import math
+import os
 import numpy as np
 
 SAMPLE_RATE = 48000
