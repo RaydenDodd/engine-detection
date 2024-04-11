@@ -3,6 +3,7 @@ import math
 import os
 import pickle
 import shutil
+import time
 
 import librosa
 import numpy as np
@@ -93,7 +94,9 @@ def main(script_dir, temp_directory, input_dirs, model, label_mapping):
     files_processed = 0
     num_correct_top1 = 0
     num_correct_top3 = 0
+    total_time = 0
     incorrect_predictions = []
+    confusion_matrix = dict()
 
     for audio_dir in input_dirs:
         i = 0
@@ -103,12 +106,18 @@ def main(script_dir, temp_directory, input_dirs, model, label_mapping):
             # On the first iteration, dirs_temp will contain the names of the brand folders
             if dirs is None and len(dirs_temp) != 0:
                 dirs = dirs_temp
+                # Set up the confusion matrix
+                for j in dirs:
+                    confusion_matrix[j] = dict()
+                    for k in dirs:
+                        confusion_matrix[j][k] = 0
                 continue
             else:
                 dir_name = dirs[i]
                 i += 1
 
             for file in files:  # Each file for the current brand
+                start = time.time()
                 # Extract MFCCs from the current file
                 mfccs = extract_mfccs(os.path.join(root, file), temp_directory)
                 # Applying the scaling seriously hinders performance for some reason
@@ -120,6 +129,7 @@ def main(script_dir, temp_directory, input_dirs, model, label_mapping):
                 prediction = np.sum(prediction, axis=0)
                 sorted_predictions = sorted(range(len(prediction)), key=lambda k: prediction[k])
 
+                # Get the top predictions and check if they were correct
                 top1 = label_mapping[sorted_predictions[-1]]
                 top2 = label_mapping[sorted_predictions[-2]]
                 top3 = label_mapping[sorted_predictions[-3]]
@@ -137,12 +147,24 @@ def main(script_dir, temp_directory, input_dirs, model, label_mapping):
                 files_processed += 1
                 print(f'Files processed: {files_processed}')
 
+                # Get how long this classification took in seconds
+                elapsed = time.time() - start
+                total_time += elapsed
+                print(f'Elapsed: {elapsed}')
+
+                # Update the confusion matrix
+                confusion_matrix[dir_name][top1] += 1
+
                 pass
 
     print('Validation stats:')
     print(f"Top 1 validation accuracy: {num_correct_top1 / files_processed}")
     print(f'Top 3 validation accuracy: {num_correct_top3 / files_processed}')
     print(f'Incorrectly predicted files:\n{incorrect_predictions}')
+    print(f'Average time per classification: {total_time / files_processed}')
+    print('Confusion matrix:')
+    for actual_brand in confusion_matrix.keys():
+        print(f'{actual_brand}: {confusion_matrix[actual_brand]}')
     pass
 
 
