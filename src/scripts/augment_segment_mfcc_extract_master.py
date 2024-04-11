@@ -2,6 +2,7 @@
 import argparse
 import os
 from tqdm import tqdm #progress bar
+from multiprocessing import cpu_count
 
 #sound files
 import librosa
@@ -462,7 +463,7 @@ def save_mapping(folder_to_class_number, output_dir, filename):
 
 
 
-def main(onedrive_enabaled, augmentation_enabled, dataframe_creation_enabled, feature_extraction_enabled, input_dirs, output_dir, mfcc_filename,mfcc_output_dir,segment_length_ms, n_mfcc, set_brands, no_convert):
+def main(onedrive_enabaled, augmentation_enabled, segmentation_enabled, dataframe_creation_enabled, feature_extraction_enabled, input_dirs, output_dir, mfcc_filename,mfcc_output_dir,segment_length_ms, n_mfcc, set_brands, no_convert):
     global N_MFCC, SEGMENT_LENGTH_MS, DURATION, EXPECTED_NUM_MFCC_VECTORS
     N_MFCC=n_mfcc
     SEGMENT_LENGTH_MS = segment_length_ms
@@ -511,15 +512,17 @@ def main(onedrive_enabaled, augmentation_enabled, dataframe_creation_enabled, fe
     
 
     # Data Augmentation and Segmentation
-    if augmentation_enabled:
+    if augmentation_enabled and segmentation_enabled:
         print("\n\n\nBeginning audio augmentation and segmentation")
         # Define your directories and call the function...
         functions = [random_gain, noise_addition, pitch_shifting, highpass_filter, lowpass_filter]
 
         processed_files = process_directories(input_dirs, output_dir, functions, no_convert)
-    else:
+    elif not augmentation_enabled and segmentation_enabled:
         print("\n\n\nSkipping audio augmentation\nBeginning audio segmentation")
         processed_files = process_directories(input_dirs, output_dir, [], no_convert)
+    else:
+        print("\n\n\nSkipping audio augmentation and audio segmentation")
     
 
 
@@ -537,7 +540,8 @@ def main(onedrive_enabaled, augmentation_enabled, dataframe_creation_enabled, fe
         print(df.head())
 
         # Save the DataFrame to a CSV file
-        df.to_csv("dataframe.csv", index=False)
+        output_file_path = os.path.join(mfcc_output_dir, "dataframe.csv")
+        df.to_csv(output_file_path, index=False)
     else:
         print("\n\n\nDid not create new dataframe as no new processed files.")
 
@@ -570,11 +574,15 @@ def main(onedrive_enabaled, augmentation_enabled, dataframe_creation_enabled, fe
         print("\n\n\nSkipping MFCC Extraction")
 
 
+    print("\n\nScript done!")
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Data augmentation, dataframe creation, and feature extraction")
-    parser.add_argument('--one_drive', help='Enable onedrive if you want the script to fnd your one drive path', action='store_true', default=True)
-    parser.add_argument('--augment', help='Disable data augmentation and segmentation', action='store_false', default=True)
+    parser.add_argument('--one_drive', help='Disable onedrive if you want the script to fnd your one drive path', action='store_false', default=True)
+    parser.add_argument('--augment', help='Disable data augmentation', action='store_false', default=True)
+    parser.add_argument('--segment', help='Disable data augmentation and segmentation', action='store_false', default=True)
     parser.add_argument('--create_df', help='Disable dataframe creation', action='store_false', default=True)
     parser.add_argument('--extract_features', help='Disable feature extraction', action='store_false', default=True)
     parser.add_argument('--input_dirs', nargs='+', help='List of input directories (DIR containing folders of brand names)(use absolute paths)', default=None)
@@ -596,6 +604,7 @@ if __name__ == "__main__":
     print(f"Running script with these settings: \n"
           f"OneDrive: {'Enabled' if args.one_drive else 'Disabled'}\n"
           f"Data Augmentation: {'Enabled' if args.augment else 'Disabled'}\n"
+          f"Data Segmentation: {'Enabled' if args.segment else 'Disabled'}\n"
           f"Dataframe Creation: {'Enabled' if args.create_df else 'Disabled'}\n"
           f"Feature Extraction: {'Enabled' if args.extract_features else 'Disabled'}\n"
           f"no_convert: {'Enabled' if args.no_convert else 'Disabled'}\n"
@@ -607,9 +616,13 @@ if __name__ == "__main__":
         brands_str = ", ".join(args.set_brands) 
         print(f"Selected Brands: {brands_str}\n")
 
+    num_cores = cpu_count()
+    print(f'Number of cores being used: {num_cores}')
+
     main(
         onedrive_enabaled=args.one_drive,
         augmentation_enabled=args.augment,
+        segmentation_enabled=args.segment,
         dataframe_creation_enabled=args.create_df,
         feature_extraction_enabled=args.extract_features,
         input_dirs=args.input_dirs,
