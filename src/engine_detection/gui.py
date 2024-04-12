@@ -32,10 +32,6 @@ class GUI(QMainWindow):
         # mic_menu.setFixedWidth(200)
 
         # Set up widgets
-        #settings_button = QPushButton('Settings')
-        #input_label = QLabel('Spectrogram View:')
-        #waveform_image = QLabel()
-        #waveform_image.setPixmap(QPixmap("photos/spectrogram.png"))
         self.start_button = QPushButton('Start')
         self.stop_button = QPushButton('Stop')
         self.start_button.released.connect(self.__handle_start)
@@ -53,12 +49,7 @@ class GUI(QMainWindow):
         # horizontal layout for microphone and setting button
         top_buttons = QHBoxLayout()
         top_buttons.addLayout(mic_button)
-        #top_buttons.addWidget(settings_button)
         left_layout.addLayout(top_buttons)
-
-        # add input and spectrogram images to left side
-        #left_layout.addWidget(input_label)
-        #left_layout.addWidget(waveform_image)
 
         # add play and stop button
         button_layout = QHBoxLayout()
@@ -87,9 +78,6 @@ class GUI(QMainWindow):
         vertical_stack_layout.addWidget(self.__setup_image_box_1())
         vertical_stack_layout.addWidget(self.__setup_image_box_2())
         vertical_stack_layout.addWidget(self.__setup_image_box_3())
-        #vertical_stack_layout.addWidget(create_image_box("photos/carA.png", "2007 Lexus GS350 AWD | 3.0L V6"))
-        #vertical_stack_layout.addWidget(create_image_box("photos/carB.png", "2008 Scion Tc | 2.4L I4"))
-        #vertical_stack_layout.addWidget(create_image_box("photos/carC.jpeg", "2018 Toyota Highlander | 3.0L V6"))
         vertical_stack_layout.setAlignment(Qt.AlignCenter)
 
         main_window = QWidget()
@@ -98,14 +86,14 @@ class GUI(QMainWindow):
         main_layout.addLayout(left_layout)
         main_layout.addLayout(vertical_stack_layout)
         main_window.setLayout(main_layout)
-        main_window.setWindowTitle('Car GUI Demo')
+        main_window.setWindowTitle('Engine Detection')
         main_window.setGeometry(100, 100, 1000, 600)
 
         self.setCentralWidget(main_window)
 
         # Non-GUI setup
-        pickle_file_path = os.path.join(self.script_dir, '..', 'trained_models', 'label_to_category_all_mapping.pickle')
-        with open(pickle_file_path , 'rb') as file:
+        pickle_file_path = os.path.join(self.script_dir, '..', 'trained_models', 'label_to_category_top_mapping.pickle')
+        with open(pickle_file_path, 'rb') as file:
             self.brands_mapping = pickle.load(file)
         self.continue_flag = False
         self.microphone = SoundRecorder()
