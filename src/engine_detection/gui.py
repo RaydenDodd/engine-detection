@@ -104,26 +104,26 @@ class GUI(QMainWindow):
 
         # Set up the temp directory
         self.current_script_dir = os.path.dirname(__file__)
-        self.temp_dir = os.path.join(self.current_script_dir, '..', 'eng_temp/')
+        self.temp_dir = os.path.join(self.current_script_dir, '..', '.eng_temp')
+        self.cut_audio_dir = os.path.join(self.temp_dir, 'cut_audio')
 
-        if not os.path.exists(self.temp_dir):
-            os.makedirs(self.temp_dir)
-        else:
-            shutil.rmtree(os.path.join(self.temp_dir, 'cut_audio'))
-            os.makedirs(os.path.join(self.temp_dir, 'cut_audio'))
+        if os.path.exists(self.temp_dir):
+            shutil.rmtree(self.temp_dir)
+        os.makedirs(self.temp_dir)
+        os.makedirs(self.cut_audio_dir)
 
     def __process_loop(self):
         while self.continue_flag:
             print("Processing")
             # Record 5 seconds of audio, then save it
-            recording = self.microphone.record(RECORDING_LENGTH)
+            recording, num_channels = self.microphone.record(RECORDING_LENGTH)
+            discard_last_chunk = False
 
             # If we failed to get a recording, exit immediately
             if recording is None:
                 break
 
-            SoundRecorder.preprocess(recording, 2, 48000)
-
+            file_path = SoundRecorder.preprocess(recording, num_channels, 48000)
 
             # Our audio file is saved as output.wav in the current working directory
             # Feed the audio into the engine detector. If nothing is detected, don't
@@ -135,7 +135,7 @@ class GUI(QMainWindow):
 
             # Extract the MFCCs from the file that was saved,
             # then feed them into the engine classifier
-            self.mfcc_extractor.slice_audio()
+            self.mfcc_extractor.slice_audio(file_path, discard_last_chunk)
             mfccs = self.mfcc_extractor.extract()
             classification_results = self.classifier.classify(mfccs)
 

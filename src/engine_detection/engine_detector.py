@@ -20,7 +20,8 @@ class EngineDetector:
         self.current_script_dir = os.path.dirname(__file__)
         
         # Construct the path to the joblib files
-        model_path = os.path.join(self.current_script_dir, '..', 'trained_models', 'ExtraTreesClassifier_pipeline.joblib')
+        # TODO: Update the model filename once the detector is finished
+        model_path = os.path.join(self.current_script_dir, '..', 'trained_models', 'SVM_pipeline.joblib')
         
         # Load the model and scaler using the full paths
         self.model_pipline = load(model_path)
