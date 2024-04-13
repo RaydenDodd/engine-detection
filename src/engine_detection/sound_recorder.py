@@ -1,4 +1,5 @@
 import os
+from time import sleep
 
 import sounddevice
 import sounddevice as sd
@@ -35,13 +36,16 @@ class SoundRecorder:
         except sounddevice.PortAudioError:  # Microphone couldn't record in 2-channel mode
             try:
                 recording = sd.rec(int(duration * SAMPLE_RATE), samplerate=SAMPLE_RATE, channels=1)
+
                 num_channels = 1
             except sounddevice.PortAudioError:
                 print('Could not record from audio device')
                 return None, None
 
-        sd.wait()
         return recording, num_channels
+
+    def wait(self):
+        sd.wait()
 
     @staticmethod
     def get_devices() -> list[str]:

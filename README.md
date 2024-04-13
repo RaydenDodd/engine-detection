@@ -6,6 +6,7 @@ Prerequisites
 
 - Python 3.11 or greater installed on your system
 - ffmpeg installed on your system
+- tkinter installed on your system
 
 To Run The Program
 ------------------
