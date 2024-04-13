@@ -3,6 +3,8 @@ import tensorflow as tf
 from tensorflow.keras.callbacks import EarlyStopping
 import numpy as np
 import os
+import matplotlib.pyplot as plt
+import os
 import json
 import argparse
 from sklearn.preprocessing import StandardScaler
@@ -15,6 +17,34 @@ def parse_cli():
     parser.add_argument('-mf', '--mfcc_filename', type=str,
                         help='The filename of the MFCC you want to train on', default=None)  # Corrected 'default' and minor grammar
     return parser.parse_args()
+
+def plot_metrics_and_save(history, model_save_dir):
+    metrics = ['loss', 'sparse_categorical_accuracy', 'precision', 'recall']
+    epochs = range(1, len(history['loss']) + 1)  # Assuming 'loss' is always present
+    color = 'blue'  # Default color set to blue
+
+    for metric in metrics:
+        plt.figure(figsize=(10, 8))
+        
+        # Plot training metric
+        if metric in history:
+            plt.plot(epochs, history[metric], color=color, label='Train')
+            # Plot validation metric if it exists
+            val_metric_key = 'val_' + metric
+            if val_metric_key in history:
+                plt.plot(epochs, history[val_metric_key], color=color, linestyle="--", label='Val')
+
+        plt.xlabel('Epoch')
+        plt.ylabel(metric.replace("_", " ").capitalize())
+        plt.title(f'Performance - {metric.replace("_", " ").capitalize()}')
+        plt.legend()
+
+        # Save the figure with the metric in the filename
+        graph_save_path = os.path.join(model_save_dir, f"{metric}_metrics.png")
+        plt.savefig(graph_save_path)
+        plt.show()  # Close the figure after saving to avoid display issues
+
+        print(f"Graph for {metric} saved to: {graph_save_path}")
 
 def main(script_dir, mfcc_dir, mfcc_filename):
     all_devices = tf.config.list_physical_devices()
@@ -100,31 +130,9 @@ def main(script_dir, mfcc_dir, mfcc_filename):
 
     ])
 
-    # Specify the CNN architecture
-    modelcnn = tf.keras.Sequential([
-        # Convolutional layer
-        tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation='relu', padding='same',
-                               input_shape=(inputs_train.shape[1], inputs_train.shape[2], 1)),
-        tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
-
-        # Second convolutional layer with padding
-        tf.keras.layers.Conv2D(64, kernel_size=(3, 3), activation='relu', padding='same'),
-        tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
-
-        # Flatten the output of the convolutional layers
-        tf.keras.layers.Flatten(),
-
-        # Dense hidden layer
-        tf.keras.layers.Dense(64, activation='relu'),
-        tf.keras.layers.Dropout(0.3),
-
-        # Output layer
-        tf.keras.layers.Dense(len(unique_targets), activation='softmax')
-    ])
-
     # Compile the network
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.000_223_869)
-    model.compile(optimizer=optimizer, loss="sparse_categorical_crossentropy", metrics=["accuracy"])
+    model.compile(optimizer=optimizer, loss="sparse_categorical_crossentropy", metrics=[tf.keras.metrics.SparseCategoricalAccuracy(), tf.keras.metrics.Recall(),tf.keras.metrics.Precision()])
     model.summary()
 
     # Train the network
@@ -134,13 +142,13 @@ def main(script_dir, mfcc_dir, mfcc_filename):
         verbose=1,  # Output a message for each early stopping
         restore_best_weights=True  # Restore model weights from the epoch with the best value of the monitored quantity
     )
-    model.fit(inputs_train, target_train,
+    history = model.fit(inputs_train, target_train,
               validation_data=(inputs_test, target_test),
               epochs=100,
               batch_size=32,
               callbacks=[early_stopping])
 
-    return model
+    return history, model
 
 
 if __name__ == '__main__':
@@ -150,16 +158,23 @@ if __name__ == '__main__':
     else:
         mfcc_dir = args.mfccdir
     if args.mfcc_filename is None:
-        mfcc_filename = 'MFCC_all_brands.npz'
+        mfcc_filename = 'MFCC_top_10_brands.npz'
     else:
         mfcc_filename = args.mfcc_filename
 
     script_path = os.path.abspath(__file__)
     script_dir = os.path.dirname(script_path)
 
-    model = main(script_dir, mfcc_dir, mfcc_filename)
+    history, model = main(script_dir, mfcc_dir, mfcc_filename)
     model_path = os.path.join(script_dir, '..', 'trained_models', 'engine_classify.keras')
+
+    history_save_path = os.path.join(model_path, f"model_history.json")
+    with open(history_save_path, 'w') as f:
+        json.dump(history.history, f)
+    print(f"Training history at {history_save_path}")
 
     # Save the model to the specified path
     model.save(model_path)
     # model = keras.models.load_model('engine_detect.keras')
+
+    plot_metrics_and_save(history, model_path)
