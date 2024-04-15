@@ -3,6 +3,7 @@ import shutil
 import sys
 import time
 
+import librosa
 import scipy
 import pickle
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QLabel, QPushButton, QComboBox, QVBoxLayout, \
@@ -12,6 +13,10 @@ from PyQt5.QtCore import Qt
 
 from tkinter import *
 from tkinter.filedialog import askopenfilename
+
+from pydub import AudioSegment
+
+from scipy.io.wavfile import write
 
 from engine_detection.engine_classifier import EngineClassifier
 from engine_detection.engine_detector import EngineDetector
@@ -28,55 +33,44 @@ class GUI(QMainWindow):
         self.script_dir = os.path.dirname(self.script_path)
 
         # If the user selects to read audio from a file, this variable will be populated
-        self.selected_file = None
-
+        self.selected_file = ''
 
         # Set up widgets
-
-        title_label = QLabel("Most Likely Brands")
-
-        ########################
-
-        # left layout includes the microphone drop down menu, spectrogram image, play, stop, buttons
-        #left_layout = QVBoxLayout()
+        # left layout includes the input selection widget, status bar, and start/stop buttons
         left_layout = self.__setup_left_layout()
-
-
 
         # Align the left side to center
         left_layout.setAlignment(Qt.AlignCenter)
         left_layout.setContentsMargins(0, 0, 0, 0)  # No margins
-
-        #######################3
 
         # Set up the right side
         vertical_stack_layout = QVBoxLayout()
         vertical_stack_layout.setAlignment(Qt.AlignTop)  # Align to the top
         vertical_stack_layout.setContentsMargins(0, 0, 0, 0)  # No margins
 
-        # Add items to vertical stack layout
-        # Increase font side of title
+        # Add the title text
+        title_label = QLabel("Most Likely Brands")
         title_font = QFont()
         title_font.setPointSize(14)
         title_label.setFont(title_font)
         title_label.setAlignment(Qt.AlignCenter)
 
-        # Add in images of car engines
+        # Add spaces for images of car engines (will be blank on startup)
         vertical_stack_layout.addWidget(title_label)
         vertical_stack_layout.addWidget(self.__setup_image_box_1())
         vertical_stack_layout.addWidget(self.__setup_image_box_2())
         vertical_stack_layout.addWidget(self.__setup_image_box_3())
         vertical_stack_layout.setAlignment(Qt.AlignCenter)
 
-        main_window = QWidget()
         # Create main layout
+        main_window = QWidget()
         main_layout = QHBoxLayout()
         main_layout.addLayout(left_layout)
         main_layout.addLayout(vertical_stack_layout)
         main_window.setLayout(main_layout)
-        main_window.setWindowTitle('Engine Detection')
         main_window.setGeometry(100, 100, 1000, 600)
 
+        self.setWindowTitle('Engine Detection')
         self.setCentralWidget(main_window)
 
         # Non-GUI setup
@@ -89,6 +83,8 @@ class GUI(QMainWindow):
         self.classifier = EngineClassifier()
         self.mfcc_extractor = MFCCExtractor()
         self.brands_image_dict = {brand_name: f'photos/{brand_name.lower()}.png' for brand_name in self.brands_mapping.values()}
+        self.audio_device = 'microphone'  # Records from microphone by default
+        self.file_start_time = 0  # The position within the file in seconds to start reading from
 
         # Set up the temp directory
         self.current_script_dir = os.path.dirname(__file__)
@@ -103,28 +99,60 @@ class GUI(QMainWindow):
     def __process_loop(self):
         while self.continue_flag:
             print("Processing")
-            # Record 5 seconds of audio, then save it
-            recording, num_channels = self.microphone.record(RECORDING_LENGTH)
-            start = time.time()
-            discard_last_chunk = False
 
-            # Wait for the recording to finish, making sure the GUI is still interactive
-            while (time.time() - start) < RECORDING_LENGTH:
-                time.sleep(0.1)
-                QApplication.processEvents()
+            if self.audio_device == 'microphone':
+                # Record 5 seconds of audio, then save it
+                self.__update_status('Recording...')
+                recording, num_channels = self.microphone.record(RECORDING_LENGTH)
+                sample_rate = 48000
+                start = time.time()
+                discard_last_chunk = False
 
-                # If the user clicked "Stop", this flag will be set to False
-                if not self.continue_flag:
+                # Wait for the recording to finish, making sure the GUI is still interactive
+                while (time.time() - start) < RECORDING_LENGTH:
+                    time.sleep(0.1)
+                    QApplication.processEvents()
+
+                    # If the user clicked "Stop", this flag will be set to False
+                    if not self.continue_flag:
+                        return
+                # Recording should be finished, in which case this call will return immediately
+                self.microphone.wait()
+                print('Recording finished')
+
+                # If we failed to get a recording, exit immediately
+                if recording is None:
+                    self.__update_status('Error: Could not record from selected device')
                     return
-            # Recording should be finished, in which case this call will return immediately
-            self.microphone.wait()
-            print('Recording finished')
+                else:
+                    # Write to a file, then read it back to convert from ndarray to AudioSegment
+                    output_path = os.path.join(self.temp_dir, 'recording.wav')
+                    write(output_path, sample_rate, recording)
+                    recording = AudioSegment.from_file(output_path, 'wav')
+            else:  # Take input from an audio file
+                if len(self.selected_file) == 0:
+                    self.__update_status('Error: No file selected')
+                    return
 
-            # If we failed to get a recording, exit immediately
-            if recording is None:
-                break
+                length = librosa.get_duration(path=self.selected_file)
+                if self.file_start_time == 0 and length < (self.file_start_time + RECORDING_LENGTH):
+                    self.__handle_stop()
+                    self.__update_status(f'Error: Audio file must be longer than {RECORDING_LENGTH} seconds')
+                    return
+                elif length < (self.file_start_time + RECORDING_LENGTH):
+                    self.__handle_stop()
+                    self.__update_status(f'Reached end of file')
+                    return
+                else:
+                    recording = AudioSegment.from_file(self.selected_file, format='wav', start_second=self.file_start_time, duration=5)
+                    self.__update_status(f'Processing {self.file_start_time // 60}:{str(self.file_start_time % 60).zfill(2)} to {(self.file_start_time + RECORDING_LENGTH) // 60}:{str((self.file_start_time + RECORDING_LENGTH) % 60).zfill(2)}...')
+                    num_channels = recording.channels
+                    sample_rate = recording.frame_rate
+                    self.file_start_time += RECORDING_LENGTH
+                    pass
 
-            file_path = SoundRecorder.preprocess(recording, num_channels, 48000)
+            # Ensure the file is stereo channel and has a 48kHz sample rate
+            file_path = SoundRecorder.preprocess(recording, num_channels, sample_rate)
 
             # Our audio file is saved as output.wav in the current working directory
             # Feed the audio into the engine detector. If nothing is detected, don't
@@ -133,24 +161,35 @@ class GUI(QMainWindow):
             #    print('No engine detected')
             #    continue
             #wprint('Engine detected!')
+            self.__update_status(f'{self.status_box.text()} Engine detected!')
 
             # Extract the MFCCs from the file that was saved,
             # then feed them into the engine classifier
-            self.mfcc_extractor.slice_audio(file_path, discard_last_chunk)
+            self.mfcc_extractor.slice_audio(file_path)
             mfccs = self.mfcc_extractor.extract()
 
             self.__classify(mfccs)
             QApplication.processEvents()
+            time.sleep(1)
 
 
     def __handle_start(self):
         print('Start')
         self.continue_flag = True
-        self.microphone.set_device(self.mic_menu.currentIndex())
+
+
+        # Determine which audio device is selected
+        if self.input_selection.currentIndex() == 0:
+            self.audio_device = 'microphone'
+            self.microphone.set_device(self.mic_menu.currentIndex())
+        else:
+            self.audio_device = 'file'
+            self.file_start_time = 0
         self.__process_loop()
 
     def __handle_stop(self):
         self.continue_flag = False
+        self.__update_status('Ready')
         print('Stopped')
 
     def __classify(self, mfccs):
@@ -184,14 +223,14 @@ class GUI(QMainWindow):
         # Set up a tab-based widget for the user to select an audio source
         input_selection_box = QGroupBox('Input Selection')
         box_layout = QVBoxLayout()
-        tabs = QTabWidget()
+        self.input_selection = QTabWidget()
         mic_tab = self.__setup_mic_tab()
         file_tab = self.__setup_file_tab()
-        tabs.addTab(mic_tab, 'Microphone')
-        tabs.addTab(file_tab, 'Audio File')
-        tabs.setFixedHeight(150)
+        self.input_selection.addTab(mic_tab, 'Microphone')
+        self.input_selection.addTab(file_tab, 'Audio File')
+        self.input_selection.setFixedHeight(150)
         input_selection_box.setFixedHeight(200)
-        box_layout.addWidget(tabs)
+        box_layout.addWidget(self.input_selection)
         input_selection_box.setLayout(box_layout)
         overall_layout.addWidget(input_selection_box)
 

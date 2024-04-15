@@ -10,9 +10,10 @@ audio
 *.wav
 *.mp3
 
-# Folders generated through scripts
+# Folders and files generated through scripts
 cut_audio
 mfccs
 
 demo
 */eng_temp
+*.png
