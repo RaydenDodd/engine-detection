@@ -19,7 +19,7 @@ def parse_cli():
     return parser.parse_args()
 
 def plot_metrics_and_save(history, model_save_dir):
-    metrics = ['loss', 'sparse_categorical_accuracy', 'precision', 'recall']
+    metrics = ['loss', 'sparse_categorical_accuracy']
     epochs = range(1, len(history['loss']) + 1)  # Assuming 'loss' is always present
     color = 'blue'  # Default color set to blue
 
@@ -132,7 +132,7 @@ def main(script_dir, mfcc_dir, mfcc_filename):
 
     # Compile the network
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.000_223_869)
-    model.compile(optimizer=optimizer, loss="sparse_categorical_crossentropy", metrics=[tf.keras.metrics.SparseCategoricalAccuracy(), tf.keras.metrics.Recall(),tf.keras.metrics.Precision()])
+    model.compile(optimizer=optimizer, loss="sparse_categorical_crossentropy", metrics=[tf.keras.metrics.SparseCategoricalAccuracy()])
     model.summary()
 
     # Train the network
@@ -168,7 +168,7 @@ if __name__ == '__main__':
     history, model = main(script_dir, mfcc_dir, mfcc_filename)
     model_path = os.path.join(script_dir, '..', 'trained_models', 'engine_classify.keras')
 
-    history_save_path = os.path.join(model_path, f"model_history.json")
+    history_save_path = os.path.join(script_dir, '..', 'trained_models', f"model_history.json")
     with open(history_save_path, 'w') as f:
         json.dump(history.history, f)
     print(f"Training history at {history_save_path}")
