@@ -1,14 +1,20 @@
+import os
+from time import sleep
+
 import sounddevice
 import sounddevice as sd
 import librosa
 from pydub import AudioSegment
 from scipy.io.wavfile import write
 
-SAMPLE_RATE = 48000
+TARGET_SAMPLE_RATE = 48000
 NUM_CHANNELS = 2
 
 
 class SoundRecorder:
+    __script_path = os.path.abspath(__file__)
+    __script_dir = os.path.dirname(__script_path)
+    __eng_temp_dir = os.path.join(__script_dir, '..', '.eng_temp')
 
     def __init__(self):
         self.device_id = -1
@@ -25,16 +31,21 @@ class SoundRecorder:
 
         sd.default.device = self.device_id
         try:
-            recording = sd.rec(int(duration * SAMPLE_RATE), samplerate=SAMPLE_RATE, channels=NUM_CHANNELS)
+            recording = sd.rec(int(duration * TARGET_SAMPLE_RATE), samplerate=TARGET_SAMPLE_RATE, channels=NUM_CHANNELS)
+            num_channels = NUM_CHANNELS
         except sounddevice.PortAudioError:  # Microphone couldn't record in 2-channel mode
             try:
-                recording = sd.rec(int(duration * SAMPLE_RATE), samplerate=SAMPLE_RATE, channels=1)
-            except sounddevice.PortAudioError:
-                print('Device is not a microphone')
-                return None
+                recording = sd.rec(int(duration * TARGET_SAMPLE_RATE), samplerate=TARGET_SAMPLE_RATE, channels=1)
 
+                num_channels = 1
+            except sounddevice.PortAudioError:
+                print('Could not record from audio device')
+                return None, None
+
+        return recording, num_channels
+
+    def wait(self):
         sd.wait()
-        return recording
 
     @staticmethod
     def get_devices() -> list[str]:
@@ -47,25 +58,27 @@ class SoundRecorder:
         return names
 
     @staticmethod
-    def preprocess(audio, num_channels, sample_rate):
-        data_type = 'ndarray'
+    def preprocess(audio: AudioSegment, num_channels, sample_rate):
+        output_path = os.path.join(SoundRecorder.__eng_temp_dir, 'processed_audio.wav')
+        if os.path.exists(output_path):
+            os.remove(output_path)
 
-        if sample_rate != SAMPLE_RATE:
-            audio = SoundRecorder.__resample(audio, sample_rate)
+        if sample_rate != TARGET_SAMPLE_RATE:
+            audio = SoundRecorder.__resample(audio)
 
         if num_channels != NUM_CHANNELS:
-            write('eng_temp/temp.wav', SAMPLE_RATE, audio)
-            left = AudioSegment.from_wav('eng_temp/temp.wav')
-            right = AudioSegment.from_wav('eng_temp/temp.wav')
+            temp_path = os.path.join(SoundRecorder.__eng_temp_dir, 'temp.wav')
+            audio.export(temp_path, format='wav')
+            left = AudioSegment.from_wav(temp_path)
+            right = AudioSegment.from_wav(temp_path)
             audio = AudioSegment.from_mono_audiosegments(left, right)
-            data_type = 'audiosegment'
+            os.remove(temp_path)
 
         # Write the processed audio to a file
-        if data_type == 'ndarray':
-            write('eng_temp/output.wav', SAMPLE_RATE, audio)
-        else:
-            audio.export('eng_temp/output.wav', format='wav')
+        audio.export(output_path, format='wav')
+
+        return output_path
 
     @staticmethod
-    def __resample(audio, orig_sample_rate):
-        return librosa.resample(audio, orig_sr=orig_sample_rate, target_sr=SAMPLE_RATE)
+    def __resample(audio: AudioSegment):
+        return audio.set_frame_rate(TARGET_SAMPLE_RATE)
