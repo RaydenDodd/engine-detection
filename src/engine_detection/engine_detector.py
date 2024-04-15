@@ -58,13 +58,15 @@ class EngineDetector:
         # Predict the class for the new audio
         prediction = self.model_pipeline.predict(mean_mfcc_reshaped)[0]  # Ensure to get the first item in prediction array
 
+        # Engine detected = 1, no engine detected = 0
+        return bool(prediction)
+
+        # The following code doesn't work unless the program has been running long enough
+        # to fill the deque
         # Update the deque with the new prediction
-        self.last_predictions.append(prediction)
+        #self.last_predictions.append(prediction)
 
         # Check if the deque is full and all values are 1
-        return len(self.last_predictions) == TIMES_IN_A_ROW and all(pred == 1 for pred in self.last_predictions)
+        #return len(self.last_predictions) == TIMES_IN_A_ROW and all(pred == 1 for pred in self.last_predictions)
 
 
-# detector = EngineDetector()
-# result = detector.detect("2006_Toyota_camry_phone_recording.m4a_segment_5.WAV")
-# print(f"Engine Detected: {result}")
