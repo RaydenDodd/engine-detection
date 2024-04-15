@@ -170,7 +170,16 @@ class GUI(QMainWindow):
 
             self.__classify(mfccs)
             QApplication.processEvents()
-            time.sleep(1)
+
+            # Sleep so results don't come too quickly
+            if self.audio_device == 'file':
+                for _ in range(45):  # Sleep for 4.5 seconds
+                    time.sleep(0.1)
+                    QApplication.processEvents()
+            else:
+                for _ in range(10):  # Sleep for 1 second
+                    time.sleep(0.1)
+                    QApplication.processEvents()
 
 
     def __handle_start(self):
