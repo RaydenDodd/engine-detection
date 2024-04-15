@@ -1,8 +1,6 @@
 pydub
 tqdm
 librosa
-scikit-learn=1.3.0
-tensorflow=2.16.1
 numpy
 matplotlib
 sounddevice
@@ -11,3 +9,14 @@ PyQt5
 audiomentations
 pandas
 ffmpeg
+
+
+scikit-learn=1.3.0
+#For Linux
+tensorflow=2.16.1 #for Dylan
+
+#For Windows in order to use GPU enabled training
+python=3.9
+cudatoolkit=11.2
+cudnn=8.1.0
+tensorflow=2.10

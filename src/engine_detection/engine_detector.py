@@ -10,6 +10,7 @@ N_MFCC = 13
 N_FFT = 2048
 HOP_LENGTH = 512
 DURATION = 1 
+TIMES_IN_A_ROW = 5
 EXPECTED_NUM_MFCC_VECTORS = math.ceil((SAMPLE_RATE * DURATION) / HOP_LENGTH)
 
 
@@ -20,14 +21,13 @@ class EngineDetector:
         self.current_script_dir = os.path.dirname(__file__)
         
         # Construct the path to the joblib files
-        # TODO: Update the model filename once the detector is finished
-        model_path = os.path.join(self.current_script_dir, '..', 'trained_models', 'SVM_pipeline.joblib')
+        model_path = os.path.join(self.current_script_dir, '..', 'trained_models', 'RandomForestClassifier_pipeline.joblib')
         
         # Load the model and scaler using the full paths
         self.model_pipline = load(model_path)
 
         # Initialize a deque with a maximum length of 5 to store the last 5 predictions
-        self.last_predictions = deque(maxlen=5)
+        self.last_predictions = deque(maxlen=TIMES_IN_A_ROW)
 
     # Extract Audio Features
     def extract_features(audio_path):
@@ -61,7 +61,7 @@ class EngineDetector:
         self.last_predictions.append(prediction)
 
         # Check if the deque is full and all values are 1
-        return len(self.last_predictions) == 5 and all(pred == 1 for pred in self.last_predictions)
+        return len(self.last_predictions) == TIMES_IN_A_ROW and all(pred == 1 for pred in self.last_predictions)
 
 
 # detector = EngineDetector()
