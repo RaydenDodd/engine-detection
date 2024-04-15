@@ -21,15 +21,16 @@ class EngineDetector:
         self.current_script_dir = os.path.dirname(__file__)
         
         # Construct the path to the joblib files
-        model_path = os.path.join(self.current_script_dir, '..', 'trained_models', 'RandomForestClassifier_pipeline.joblib')
+        model_path = os.path.join(self.current_script_dir, '..', 'trained_models', 'RandomForest_pipeline.joblib')
         
         # Load the model and scaler using the full paths
-        self.model_pipline = load(model_path)
+        self.model_pipeline = load(model_path)
 
         # Initialize a deque with a maximum length of 5 to store the last 5 predictions
         self.last_predictions = deque(maxlen=TIMES_IN_A_ROW)
 
     # Extract Audio Features
+    @staticmethod
     def extract_features(audio_path):
         signal, sr = librosa.load(audio_path, sr=SAMPLE_RATE)
         mfcc = librosa.feature.mfcc(y=signal, sr=sr, n_mfcc=N_MFCC, n_fft=N_FFT, hop_length=HOP_LENGTH)

@@ -11,7 +11,7 @@ pandas
 ffmpeg
 
 
-scikit-learn=1.3.0
+scikit-learn=1.4.2
 #For Linux
 tensorflow=2.16.1 #for Dylan
 

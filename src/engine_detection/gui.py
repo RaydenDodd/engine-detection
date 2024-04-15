@@ -157,10 +157,12 @@ class GUI(QMainWindow):
             # Our audio file is saved as output.wav in the current working directory
             # Feed the audio into the engine detector. If nothing is detected, don't
             # feed it into the neural network
-            #if not self.detector.detect(os.path.join(self.temp_dir, 'output.wav')):
-            #    print('No engine detected')
-            #    continue
-            #wprint('Engine detected!')
+            if not self.detector.detect(os.path.join(self.temp_dir, 'processed_audio.wav')):
+                self.__update_status(f'{self.status_box.text()} No engine detected')
+                for _ in range(10):  # Sleep for 1 second
+                    time.sleep(0.1)
+                    QApplication.processEvents()
+                continue
             self.__update_status(f'{self.status_box.text()} Engine detected!')
 
             # Extract the MFCCs from the file that was saved,
