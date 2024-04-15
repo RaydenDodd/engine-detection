@@ -9,7 +9,7 @@ SAMPLE_RATE = 48000
 N_MFCC = 13
 N_FFT = 2048
 HOP_LENGTH = 512
-DURATION = 1 
+DURATION = 5
 TIMES_IN_A_ROW = 5
 EXPECTED_NUM_MFCC_VECTORS = math.ceil((SAMPLE_RATE * DURATION) / HOP_LENGTH)
 
@@ -50,16 +50,25 @@ class EngineDetector:
         mfcc = self.extract_features(file_path)
 
         # Calculate mean MFCC
-        mean_mfcc = np.mean(mfcc, axis=0)
+        mean_mfcc = []
+        for i in range(DURATION):
+            mean_mfcc.append(np.mean(mfcc[((EXPECTED_NUM_MFCC_VECTORS // DURATION) * i):((EXPECTED_NUM_MFCC_VECTORS // DURATION) * (i + 1))], axis=0))
+        mean_mfcc = np.array(mean_mfcc)
 
         # Correcting the shape for scaler.transform
-        mean_mfcc_reshaped = mean_mfcc.reshape(1, -1)
+        mean_mfcc_reshaped = []
+        for i in range(DURATION):
+            mean_mfcc_reshaped.append(mean_mfcc[i].reshape(1, -1))
+        mean_mfcc_reshaped = np.array(mean_mfcc_reshaped)
 
         # Predict the class for the new audio
-        prediction = self.model_pipeline.predict(mean_mfcc_reshaped)[0]  # Ensure to get the first item in prediction array
+        predictions = np.empty(shape=DURATION)
+        for i in range(DURATION):
+            predictions[i] = self.model_pipeline.predict(mean_mfcc_reshaped[0])  # Ensure to get the first item in prediction array
 
         # Engine detected = 1, no engine detected = 0
-        return bool(prediction)
+        # Return True if greater than half of the predictions were 1
+        return True if (sum(predictions) >= (DURATION // 2)) else False
 
         # The following code doesn't work unless the program has been running long enough
         # to fill the deque

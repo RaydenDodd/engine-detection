@@ -154,24 +154,21 @@ class GUI(QMainWindow):
             # Ensure the file is stereo channel and has a 48kHz sample rate
             file_path = SoundRecorder.preprocess(recording, num_channels, sample_rate)
 
-            # Our audio file is saved as output.wav in the current working directory
-            # Feed the audio into the engine detector. If nothing is detected, don't
-            # feed it into the neural network
-            if not self.detector.detect(os.path.join(self.temp_dir, 'processed_audio.wav')):
+            # Our audio file is saved as processed_audio.wav in the temp directory
+            # Feed the audio into the engine detector. If an engine is detected, then
+            # feed the audio into the neural network.
+            if self.detector.detect(os.path.join(self.temp_dir, 'processed_audio.wav')):
+                self.__update_status(f'{self.status_box.text()} Engine detected!')
+
+                # Extract the MFCCs from the file that was saved,
+                # then feed them into the engine classifier
+                self.mfcc_extractor.slice_audio(file_path)
+                mfccs = self.mfcc_extractor.extract()
+
+                self.__classify(mfccs)
+                QApplication.processEvents()
+            else:
                 self.__update_status(f'{self.status_box.text()} No engine detected')
-                for _ in range(10):  # Sleep for 1 second
-                    time.sleep(0.1)
-                    QApplication.processEvents()
-                continue
-            self.__update_status(f'{self.status_box.text()} Engine detected!')
-
-            # Extract the MFCCs from the file that was saved,
-            # then feed them into the engine classifier
-            self.mfcc_extractor.slice_audio(file_path)
-            mfccs = self.mfcc_extractor.extract()
-
-            self.__classify(mfccs)
-            QApplication.processEvents()
 
             # Sleep so results don't come too quickly
             if self.audio_device == 'file':
