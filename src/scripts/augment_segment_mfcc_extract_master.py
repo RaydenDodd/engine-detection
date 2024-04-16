@@ -254,13 +254,15 @@ def process_directories(input_dirs, output_dir, functions, no_content):
     # Initialize lists to track conversion status
     converted_files = []
 
-    # Aggregate audio paths and count files per directory, filtering for audio files
+    # Aggregate audio paths and count files per directory
     audio_paths = []
     for input_dir in input_dirs:
-        for root, _, files in os.walk(input_dir):
+        for root, dirs, files in os.walk(input_dir):
             audio_files = [file for file in files if is_audio_file(file)]
             file_count = len(audio_files)
             audio_paths.extend([os.path.join(root, file) for file in audio_files])
+            # Print the current directory and number of audio files found
+            print(f"Directory: {root}, Files found: {file_count}")
             # Update the count for the input directory
             files_per_dir[input_dir] += file_count
 
@@ -301,10 +303,10 @@ def process_directories(input_dirs, output_dir, functions, no_content):
         for file, error in failed_files:
             print(f"{file}: {error}")
 
-    if processed_files:
-        print("process the following files:")
-        for file in processed_files:
-            print(f"{file}:")
+    # if processed_files:
+    #     print("process the following files:")
+    #     for file in processed_files:
+    #         print(f"{file}:")
 
     # Reporting on converted files
     if converted_files:
