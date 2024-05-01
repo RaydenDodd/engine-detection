@@ -4,7 +4,7 @@ from pydub import AudioSegment
 from scipy.io.wavfile import write
 
 DURATION = 5  # Recording 5-second audio chunks
-TARGET_SAMPLE_RATE = 44100
+TARGET_SAMPLE_RATE = 48000
 TARGET_NUM_CHANNELS = 2
 
 
@@ -50,6 +50,6 @@ if __name__ == '__main__':
     samplerate = int(device_info['default_samplerate'])
 
     # Get audio from the selected device
-    raw_audio = get_mic_audio(device_id, channels, samplerate)
+    raw_audio = get_mic_audio(device_id, TARGET_NUM_CHANNELS, TARGET_SAMPLE_RATE)
 
-    preprocess(raw_audio, channels, samplerate)
+    preprocess(raw_audio, channels, TARGET_SAMPLE_RATE)
