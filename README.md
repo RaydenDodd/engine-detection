@@ -38,13 +38,13 @@ training_data_dir
 ```
 
 ## Running the Training Script
-First, the audio needs to be processed and turned into a form that is suitable for input to a neural network. This project uses a single Python script for this at `src/scripts/augment_segment_mfcc_extract_master.py` to perform the entire audio processing task, for ease of use. This includes applying data augmentation, segmentation, and MFCC extraction. The required arguments are:
+First, the audio needs to be processed and turned into a form that is suitable for input to a neural network. This project uses a single Python script at `src/scripts/augment_segment_mfcc_extract_master.py` to perform the entire audio processing task, for ease of use. This includes applying data augmentation, segmentation, and MFCC extraction. The required arguments are:
 ```
 --input_dirs <training audio directory>
 --output_dir <MFCC output directory>
 ```
 
-To create an engine classifier model that's compatible with the full program, it needs to use 100ms audio segments with 13 MFCCs per sample. The following arguments will set these required parameters (13 MFCCs is the script's default).
+To create an engine classifier model that's compatible with the full program, it needs to use 100ms audio segments with 13 MFCCs per sample. The following arguments will set the required parameters (13 MFCCs is the script's default).
 ```
 python3 augment_segment_mfcc_extract_master.py --input_dirs <training audio directory> --output_dir <MFCC output directory> --segment_length 100
 ```
@@ -62,7 +62,7 @@ src/trained_models/label_to_category_top_mapping.pickle
 all .png files in src/photos
 ```
 
-Note: RandomForest_pipeline.joblib is too large to be included in the GitHub repo as is. To use it, you must extract it from `src/trained_models/RandomForest_pipeline.zip`.
+Note: RandomForest_pipeline.joblib is too large to be included in the GitHub repo as is. To use it, you must first extract it from `src/trained_models/RandomForest_pipeline.zip`.
 <br>
 To run the program, navigate to the `src` directory in a command prompt and run the following command:
 ```
